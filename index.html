@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Integrated NHSI Analytics | JKN Kedah</title>
+    
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1e3a8a">
+    <link rel="apple-touch-icon" href="nhsi_app_icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- PapaParse for CSV -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <!-- Chart.js & Plugins -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .loader {
+            border-top-color: #2563eb;
+            animation: spinner 0.8s linear infinite;
+        }
+        @keyframes spinner {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .chart-container {
+            position: relative;
+            margin: auto;
+            height: 380px;
+            width: 100%;
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+        /* PWA Install Banner Style */
+        #pwa-install-banner {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-900 selection:bg-blue-100">
+
+    <!-- PWA Install Banner -->
+    <div id="pwa-install-banner" class="animate-fade-in">
+        <div class="glass-card p-5 rounded-[2rem] border-blue-200 border-2 shadow-2xl flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <img src="nhsi_app_icon.png" class="w-12 h-12 rounded-2xl shadow-lg" alt="App Icon">
+                <div>
+                    <h4 class="font-black text-slate-800 text-sm">Pasang Apps NHSI</h4>
+                    <p class="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Akses terus dari skrin telefon</p>
+                </div>
+            </div>
+            <button onclick="installPWA()" class="bg-blue-600 hover:bg-blue-700 text-white font-black text-xs px-6 py-3 rounded-2xl transition-all shadow-lg shadow-blue-500/30 active:scale-95">
+                PASANG
+            </button>
+        </div>
+    </div>
+
+    <div id="app" class="p-3 md:p-8 max-w-7xl mx-auto space-y-6 md:space-y-10 pb-24 md:pb-8">
+        
+        <!-- Loading Overlay -->
+        <div id="loadingOverlay" class="fixed inset-0 bg-white/95 z-[100] flex flex-col items-center justify-center transition-all duration-500">
+            <div class="loader ease-linear rounded-full border-4 border-slate-100 h-12 w-12 md:h-16 md:w-16 mb-6"></div>
+            <p class="text-slate-800 font-black text-lg md:text-xl tracking-tight text-center px-6 uppercase">Menyusun Analisa NHSI Kedah...</p>
+        </div>
+
+        <!-- Header -->
+        <header class="bg-gradient-to-br from-blue-950 via-blue-900 to-indigo-900 rounded-[2rem] md:rounded-[3rem] p-6 md:p-12 text-white shadow-2xl relative overflow-hidden">
+            <div class="absolute top-0 right-0 opacity-10 pointer-events-none translate-x-1/4 -translate-y-1/4">
+                <i data-lucide="activity" class="w-[300px] h-[300px] md:w-[600px] md:h-[600px]"></i>
+            </div>
+            
+            <div class="relative z-10">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 md:gap-8">
+                    <div class="space-y-2 md:space-y-4">
+                        <div class="inline-flex flex-col gap-1.5">
+                            <div class="inline-flex items-center gap-2 bg-blue-500/20 px-3 py-1.5 rounded-full border border-blue-400/20 w-fit">
+                                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                                <span class="text-[10px] font-black uppercase tracking-[0.2em] text-blue-100">Live Integrated Data 2026</span>
+                            </div>
+                            <div id="sourceDateLabel" class="text-[10px] font-bold text-blue-300 uppercase tracking-[0.2em] ml-1 opacity-70 italic">
+                                Memuatkan Data...
+                            </div>
+                        </div>
+                        <h1 class="text-3xl md:text-6xl font-black mb-1 tracking-tighter leading-tight">Analisis NHSI Kedah</h1>
+                        <p class="text-blue-100/70 text-sm md:text-xl font-medium max-w-2xl leading-relaxed uppercase tracking-wide">Pemantauan Prestasi Saringan NHSI 2026 JKN Kedah</p>
+                    </div>
+                </div>
+
+                <!-- Main KPIs -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mt-8 md:mt-14">
+                    <div class="bg-white/10 rounded-3xl p-6 backdrop-blur-xl border border-white/10 transition-all hover:bg-white/15 cursor-default group shadow-lg">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="p-2.5 bg-blue-500/30 rounded-xl">
+                                <i data-lucide="users" class="text-blue-100 w-5 h-5"></i>
+                            </div>
+                            <span class="font-black text-blue-100 text-[10px] md:text-xs tracking-[0.2em] uppercase">Saringan Sebenar</span>
+                        </div>
+                        <div id="statActual" class="text-4xl md:text-6xl font-black text-white tracking-tighter">0</div>
+                        <div class="text-[10px] text-blue-200/50 mt-3 font-bold uppercase tracking-widest">Individu Disaring</div>
+                    </div>
+
+                    <div class="bg-white/10 rounded-3xl p-6 backdrop-blur-xl border border-white/10 transition-all hover:bg-white/15 cursor-default group shadow-lg">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="p-2.5 bg-purple-500/30 rounded-xl">
+                                <i data-lucide="target" class="text-purple-100 w-5 h-5"></i>
+                            </div>
+                            <span class="font-black text-blue-100 text-[10px] md:text-xs tracking-[0.2em] uppercase">Sasaran Daerah</span>
+                        </div>
+                        <div id="statTarget" class="text-4xl md:text-6xl font-black text-white tracking-tighter">0</div>
+                        <div id="statTargetSub" class="text-[10px] text-blue-200/50 mt-3 font-bold uppercase tracking-widest">Berdasarkan Ketetapan</div>
+                    </div>
+
+                    <div class="bg-white/10 rounded-3xl p-6 backdrop-blur-xl border border-white/10 transition-all hover:bg-white/15 cursor-default sm:col-span-2 lg:col-span-1 group shadow-lg">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="p-2.5 bg-yellow-500/30 rounded-xl">
+                                <i data-lucide="trending-up" class="text-yellow-100 w-5 h-5"></i>
+                            </div>
+                            <span class="font-black text-blue-100 text-[10px] md:text-xs tracking-[0.2em] uppercase">Prestasi Semasa</span>
+                        </div>
+                        <div class="flex items-baseline gap-3">
+                            <div id="statRate" class="text-4xl md:text-6xl font-black text-yellow-300 tracking-tighter">0%</div>
+                            <div class="text-blue-200/40 font-black text-[10px] uppercase tracking-[0.2em]">Pencapaian</div>
+                        </div>
+                        <div class="w-full bg-blue-950/50 h-2.5 rounded-full mt-5 overflow-hidden p-[1.5px]">
+                            <div id="statRateBar" class="bg-gradient-to-r from-yellow-500 via-yellow-400 to-yellow-200 h-full rounded-full transition-all duration-1000 shadow-[0_0_15px_rgba(250,204,21,0.4)]" style="width: 0%;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Filters Section -->
+        <div class="bg-white rounded-[2rem] shadow-2xl shadow-slate-200/60 border border-slate-100 p-6 md:p-8 animate-fade-in relative z-40">
+            <div class="flex items-center gap-3 mb-8">
+                <div class="p-2.5 bg-blue-50 rounded-xl">
+                    <i data-lucide="filter" class="w-5 h-5 text-blue-600"></i>
+                </div>
+                <h3 class="font-black text-slate-800 text-sm md:text-lg uppercase tracking-tight">Kriteria Penapis Data</h3>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
+                <div class="space-y-2.5">
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Platform Utama</label>
+                    <select id="filterPlatform" onchange="handlePlatformChange()" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-4 font-black text-slate-700 text-xs md:text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all cursor-pointer shadow-sm">
+                        <option value="ALL">Semua Platform</option>
+                        <option value="MyVAS">MyVAS</option>
+                        <option value="KOSPEN Community">KOSPEN Community</option>
+                        <option value="KOSPEN WOW">KOSPEN WOW</option>
+                    </select>
+                </div>
+                <div class="space-y-2.5">
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Daerah</label>
+                    <select id="filterDistrict" onchange="handleDistrictChange()" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-4 font-black text-slate-700 text-xs md:text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all cursor-pointer shadow-sm">
+                        <option value="ALL">Semua Daerah</option>
+                    </select>
+                </div>
+                <div id="ptjFilterContainer" class="space-y-2.5">
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Kategori PTJ</label>
+                    <select id="filterPTJ" onchange="handlePTJChange()" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-4 font-black text-slate-700 text-xs md:text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all cursor-pointer shadow-sm">
+                        <option value="ALL">Semua Kategori</option>
+                        <option value="PKD">PKD (Klinik Kesihatan)</option>
+                        <option value="Hospital">Hospital</option>
+                        <option value="PKPD">Pergigian</option>
+                    </select>
+                </div>
+                <div class="space-y-2.5">
+                    <label id="labelFacility" class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Nama Fasiliti</label>
+                    <select id="filterFacility" onchange="applyFilters()" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-4 font-black text-slate-700 text-xs md:text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all cursor-pointer shadow-sm">
+                        <option value="ALL">Semua Fasiliti</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- ANALISA 1 & 2 -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div class="glass-card rounded-[2.5rem] p-8 md:p-10 border border-white/40 space-y-8 animate-fade-in shadow-xl">
+                <div class="flex items-center gap-4">
+                    <div class="p-3 bg-blue-100 rounded-2xl shadow-inner"><i data-lucide="map-pin" class="w-6 h-6 text-blue-600"></i></div>
+                    <h3 class="text-2xl font-black text-slate-900 tracking-tighter uppercase">Prestasi Daerah</h3>
+                </div>
+                <div id="districtPerformance" class="space-y-4 max-h-[500px] overflow-y-auto custom-scrollbar pr-4"></div>
+            </div>
+
+            <div class="glass-card rounded-[2.5rem] p-8 md:p-10 border border-white/40 space-y-8 animate-fade-in shadow-xl">
+                <div class="flex items-center gap-4">
+                    <div class="p-3 bg-indigo-100 rounded-2xl shadow-inner"><i data-lucide="layout-grid" class="w-6 h-6 text-indigo-600"></i></div>
+                    <h3 id="labelAnalisa2" class="text-2xl font-black text-slate-900 tracking-tighter uppercase leading-none">Kategori & Lokaliti</h3>
+                </div>
+                <div id="ptjCategoryPerformance" class="space-y-4 max-h-[500px] overflow-y-auto custom-scrollbar pr-4"></div>
+            </div>
+        </div>
+
+        <!-- ANALISA 3: DAPATAN SARINGAN -->
+        <div class="glass-card rounded-[3rem] p-8 md:p-14 border border-white/40 space-y-16 animate-fade-in shadow-2xl relative overflow-hidden bg-white/80">
+            <div class="flex items-center gap-5 relative z-10">
+                <div class="p-4 bg-emerald-100 rounded-[2rem] shadow-inner">
+                    <i data-lucide="bar-chart-3" class="w-8 h-8 text-emerald-600"></i>
+                </div>
+                <div>
+                    <h3 class="text-4xl font-black text-slate-900 tracking-tighter uppercase leading-none">Analisa 3: Dapatan Saringan</h3>
+                    <p class="text-slate-400 font-bold text-[11px] uppercase tracking-[0.3em] mt-2">Populasi: <span id="findingTotal" class="text-blue-600 font-black">0</span> Individu</p>
+                </div>
+            </div>
+
+            <!-- SECTION A: SOSIODEMOGRAFI -->
+            <div class="space-y-10">
+                <div class="flex items-center gap-4 border-l-8 border-blue-500 pl-6">
+                    <h4 class="text-2xl font-black text-slate-800 uppercase tracking-tighter">A. Sosiodemografi</h4>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
+                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm hover:shadow-md transition-all">
+                        <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">A1. Jantina</h5>
+                        <div class="chart-container"><canvas id="chartGender"></canvas></div>
+                    </div>
+                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm hover:shadow-md transition-all">
+                        <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">A2. Bangsa</h5>
+                        <div class="chart-container"><canvas id="chartEthnicity"></canvas></div>
+                    </div>
+                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm hover:shadow-md transition-all">
+                        <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">A3. Kumpulan Umur</h5>
+                        <div class="chart-container"><canvas id="chartAge"></canvas></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION B: FAKTOR RISIKO DAN PENYAKIT -->
+            <div class="space-y-10">
+                <div class="flex items-center gap-4 border-l-8 border-rose-500 pl-6">
+                    <h4 class="text-2xl font-black text-slate-800 uppercase tracking-tighter">B. Faktor Risiko dan Penyakit</h4>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
+                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm"><h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">B1. Status Depresi</h5><div class="chart-container"><canvas id="chartDepression"></canvas></div></div>
+                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm"><h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">B2. Status Anxierti</h5><div class="chart-container"><canvas id="chartAnxiety"></canvas></div></div>
+                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm"><h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">B3. Status Merokok</h5><div class="chart-container"><canvas id="chartSmoking"></canvas></div></div>
+                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm"><h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">B4. Penggunaan Alkohol</h5><div class="chart-container"><canvas id="chartAlcohol"></canvas></div></div>
+                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm"><h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">B5. Status BMI</h5><div class="chart-container"><canvas id="chartBMI"></canvas></div></div>
+                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm"><h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">B6. Gula Dalam Darah</h5><div class="chart-container"><canvas id="chartGlucose"></canvas></div></div>
+                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm"><h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">B7. Tekanan Darah</h5><div class="chart-container"><canvas id="chartBP"></canvas></div></div>
+                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm"><h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">B8. Status Kolesterol</h5><div class="chart-container"><canvas id="chartCholesterol"></canvas></div></div>
+                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm lg:col-span-1"><h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">B9. Risiko NCD</h5><div class="chart-container"><canvas id="chartNCD"></canvas></div></div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="text-center pb-24 pt-10 px-6">
+            <p class="text-slate-400 font-black text-[10px] uppercase tracking-[0.4em] mb-3">Unit Kawalan Penyakit Tidak Berjangkit JKN Kedah</p>
+            <p class="text-slate-300 font-medium text-[9px] md:text-xs italic tracking-widest leading-loose">Visualisasi Data NHSI &copy; 2026<br>Sistem Automasi Data Google Sheets</p>
+        </footer>
+
+    </div>
+
+    <script>
+        const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1VIT_i4-iW6l9XAxt0tR9KiDRe-gib-G8aaeTy9wsSbc/export?format=csv&gid=';
+        const GID_MAIN = '0';
+        const GID_TARGETS = '430782422';
+        
+        let rawData = [];
+        let filteredData = [];
+        let districts = [];
+        let targets = {}; 
+        let charts = {};
+
+        // --- PWA LOGIC ---
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('pwa-install-banner').style.display = 'block';
+        });
+
+        async function installPWA() {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') {
+                document.getElementById('pwa-install-banner').style.display = 'none';
+            }
+            deferredPrompt = null;
+        }
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').then(reg => console.log('SW Registered')).catch(err => console.log('SW Error'));
+            });
+        }
+
+        // --- DATA LOGIC ---
+        window.onload = async () => {
+            lucide.createIcons();
+            Chart.register(ChartDataLabels);
+            Chart.defaults.font.family = 'Inter';
+            Chart.defaults.font.weight = '800';
+            await fetchAllData();
+            initDashboard();
+            hideLoader();
+        };
+
+        async function fetchAllData() {
+            try {
+                const [dRes, tRes] = await Promise.all([fetch(SHEET_URL + GID_MAIN), fetch(SHEET_URL + GID_TARGETS)]);
+                const [dCsv, tCsv] = await Promise.all([dRes.text(), tRes.text()]);
+                await parseMainData(dCsv);
+                await parseTargetData(tCsv);
+            } catch (e) { console.error(e); alert('Ralat sambungan data.'); }
+        }
+
+        function parseMainData(csv) {
+            return new Promise(resolve => {
+                Papa.parse(csv, {
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: results => {
+                        rawData = results.data.map(r => {
+                            const fType = (r.FACILITY_TYPE || "").toUpperCase();
+                            let ptj = 'PKD';
+                            if (fType.includes('HOSPITAL')) ptj = 'Hospital';
+                            else if (fType.includes('DENTAL')) ptj = 'PKPD';
+                            return { ...r, PTJ_TYPE: ptj, FACILITY_DISTRICT: (r.FACILITY_DISTRICT || "").trim() };
+                        });
+                        const dates = results.data.map(r => r.SOURCEDATE).filter(Boolean);
+                        if (dates.length > 0) {
+                            const sorted = dates.sort((a, b) => new Date(b) - new Date(a));
+                            const lastDate = new Date(sorted[0]);
+                            document.getElementById('sourceDateLabel').innerText = `DATA DIKEMASKINI: ${lastDate.toLocaleDateString('ms-MY', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase()}`;
+                        }
+                        districts = [...new Set(rawData.map(r => r.FACILITY_DISTRICT))].filter(Boolean).sort();
+                        resolve();
+                    }
+                });
+            });
+        }
+
+        function parseTargetData(csv) {
+            return new Promise(resolve => {
+                Papa.parse(csv, {
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: results => {
+                        targets = {};
+                        results.data.forEach(row => {
+                            let d = (row.DAERAH || row.Daerah || "").trim().toUpperCase();
+                            if (d) {
+                                targets[d] = {
+                                    PKD: parseInt(row.TARGET_PKD || row.PKD || 0),
+                                    Hospital: parseInt(row.TARGET_HOSPITAL || row.Hospital || 0),
+                                    PKPD: parseInt(row.TARGET_PKPD || row.PKPD || 0),
+                                    KOSPEN: parseInt(row.TARGET_KOSPEN || row.KOSPEN || row['KOSPEN '] || 0),
+                                    MYVAS: parseInt(row.TARGET_MYVAS || row.MYVAS || 0)
+                                };
+                            }
+                        });
+                        resolve();
+                    }
+                });
+            });
+        }
+
+        function initDashboard() {
+            populateDistrictDropdown();
+            updateFacilityDropdown();
+            applyFilters();
+        }
+
+        function populateDistrictDropdown() {
+            const select = document.getElementById('filterDistrict');
+            districts.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d; opt.textContent = d;
+                select.appendChild(opt);
+            });
+        }
+
+        function handlePlatformChange() {
+            const p = document.getElementById('filterPlatform').value;
+            const ptjCont = document.getElementById('ptjFilterContainer');
+            const labelFac = document.getElementById('labelFacility');
+            const labelA2 = document.getElementById('labelAnalisa2');
+            if (p === 'KOSPEN WOW') {
+                ptjCont.style.display = 'block';
+                labelFac.innerText = 'Nama Fasiliti';
+                labelA2.innerText = 'Analisa 2: Kategori PTJ';
+            } else if (p === 'KOSPEN Community') {
+                ptjCont.style.display = 'none';
+                labelFac.innerText = 'Nama Lokaliti';
+                labelA2.innerText = 'Analisa 2: Mengikut Lokaliti';
+            } else {
+                ptjCont.style.display = 'none';
+                labelFac.innerText = 'Nama Fasiliti';
+                labelA2.innerText = 'Analisa 2: Mengikut Fasiliti';
+            }
+            document.getElementById('filterPTJ').value = 'ALL';
+            updateFacilityDropdown();
+            applyFilters();
+        }
+
+        function handleDistrictChange() { updateFacilityDropdown(); applyFilters(); }
+        function handlePTJChange() { updateFacilityDropdown(); applyFilters(); }
+
+        function updateFacilityDropdown() {
+            const p = document.getElementById('filterPlatform').value;
+            const d = document.getElementById('filterDistrict').value;
+            const ptj = document.getElementById('filterPTJ').value;
+            const select = document.getElementById('filterFacility');
+            let data = rawData;
+            if (p !== 'ALL') data = data.filter(r => r.PLATFORM === p);
+            if (d !== 'ALL') data = data.filter(r => r.FACILITY_DISTRICT === d);
+            if (p === 'KOSPEN WOW' && ptj !== 'ALL') data = data.filter(r => r.PTJ_TYPE === ptj);
+            let list = [];
+            if (p === 'KOSPEN Community') list = [...new Set(data.map(r => r.LOCALITY))].filter(Boolean).sort();
+            else list = [...new Set(data.map(r => r.FACILITY_NAME))].filter(Boolean).sort();
+            select.innerHTML = `<option value="ALL">Semua ${p === 'KOSPEN Community' ? 'Lokaliti' : 'Fasiliti'}</option>`;
+            list.forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item; opt.textContent = item;
+                select.appendChild(opt);
+            });
+        }
+
+        function applyFilters() {
+            const p = document.getElementById('filterPlatform').value;
+            const d = document.getElementById('filterDistrict').value;
+            const ptj = document.getElementById('filterPTJ').value;
+            const fac = document.getElementById('filterFacility').value;
+            filteredData = rawData;
+            if (p !== 'ALL') filteredData = filteredData.filter(r => r.PLATFORM === p);
+            if (d !== 'ALL') filteredData = filteredData.filter(r => r.FACILITY_DISTRICT === d);
+            if (p === 'KOSPEN WOW' && ptj !== 'ALL') filteredData = filteredData.filter(r => r.PTJ_TYPE === ptj);
+            if (fac !== 'ALL') {
+                if (p === 'KOSPEN Community') filteredData = filteredData.filter(r => r.LOCALITY === fac);
+                else filteredData = filteredData.filter(r => r.FACILITY_NAME === fac);
+            }
+            updateKPIs();
+            renderAnalisa1();
+            renderAnalisa2();
+            renderAnalisaCharts();
+        }
+
+        function updateKPIs() {
+            const actual = filteredData.length;
+            let target = 0;
+            const p = document.getElementById('filterPlatform').value;
+            const d = document.getElementById('filterDistrict').value;
+            const ptj = document.getElementById('filterPTJ').value;
+            const fac = document.getElementById('filterFacility').value;
+            if (fac === 'ALL') {
+                const getTargetForDistrict = (distName) => {
+                    const t = targets[distName.toUpperCase()] || { PKD:0, Hospital:0, PKPD:0, MYVAS:0, KOSPEN:0 };
+                    if (p === 'ALL') return (t.PKD + t.Hospital + t.PKPD + t.MYVAS + t.KOSPEN);
+                    if (p === 'MyVAS') return t.MYVAS;
+                    if (p === 'KOSPEN Community') return t.KOSPEN;
+                    if (p === 'KOSPEN WOW') return (ptj === 'ALL' ? (t.PKD + t.Hospital + t.PKPD) : (t[ptj] || 0));
+                    return 0;
+                };
+                if (d === 'ALL') districts.forEach(dn => target += getTargetForDistrict(dn));
+                else target = getTargetForDistrict(d);
+            }
+            document.getElementById('statActual').innerText = actual.toLocaleString();
+            if (fac !== 'ALL') {
+                document.getElementById('statTarget').innerText = '-';
+                document.getElementById('statRate').innerText = '0%';
+                document.getElementById('statRateBar').style.width = '0%';
+                document.getElementById('statTargetSub').innerText = 'LOKALITI/FASILITI DIPILIH';
+            } else {
+                document.getElementById('statTarget').innerText = target.toLocaleString();
+                document.getElementById('statTargetSub').innerText = 'Sasaran Mengikut Kriteria';
+                if (target > 0) {
+                    const rate = (actual / target * 100);
+                    document.getElementById('statRate').innerText = rate.toFixed(1) + '%';
+                    document.getElementById('statRateBar').style.width = Math.min(rate, 100) + '%';
+                } else {
+                    document.getElementById('statRate').innerText = '0%';
+                    document.getElementById('statRateBar').style.width = '0%';
+                }
+            }
+        }
+
+        function renderAnalisa1() {
+            const container = document.getElementById('districtPerformance');
+            container.innerHTML = '';
+            const p = document.getElementById('filterPlatform').value;
+            const ptj = document.getElementById('filterPTJ').value;
+            const counts = {}; filteredData.forEach(r => counts[r.FACILITY_DISTRICT] = (counts[r.FACILITY_DISTRICT] || 0) + 1);
+            const curDistricts = Object.keys(counts).sort();
+            curDistricts.forEach(d => {
+                const actual = counts[d];
+                const t = targets[d.toUpperCase()] || { PKD:0, Hospital:0, PKPD:0, MYVAS:0, KOSPEN:0 };
+                let target = 0;
+                if (p === 'ALL') target = (t.PKD + t.Hospital + t.PKPD + t.MYVAS + t.KOSPEN);
+                else if (p === 'MyVAS') target = t.MYVAS;
+                else if (p === 'KOSPEN Community') target = t.KOSPEN;
+                else if (p === 'KOSPEN WOW') target = (ptj === 'ALL' ? (t.PKD + t.Hospital + t.PKPD) : (t[ptj] || 0));
+                const rate = target > 0 ? (actual / target * 100) : null;
+                const color = rate >= 100 ? 'bg-emerald-500' : (rate >= 80 ? 'bg-blue-500' : 'bg-amber-500');
+                const row = document.createElement('div');
+                row.className = 'bg-white/70 p-4 rounded-2xl border border-slate-100 space-y-2 shadow-sm';
+                row.innerHTML = `<div class="flex justify-between items-end"><span class="font-black text-slate-800 text-[11px] uppercase tracking-tighter">${d}</span><div class="text-right"><span class="font-black text-slate-900">${actual.toLocaleString()}</span>${target > 0 ? `<span class="text-slate-400 text-[10px] ml-1 font-bold">/ ${target.toLocaleString()}</span>` : ''}</div></div>${target > 0 ? `<div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden shadow-inner"><div class="h-full ${color} transition-all duration-1000 shadow-lg" style="width: ${Math.min(rate, 100)}%"></div></div><div class="text-[9px] font-black text-blue-600 text-right uppercase tracking-[0.2em]">${rate.toFixed(1)}% SIAP</div>` : '<div class="text-[9px] text-slate-300 font-bold italic tracking-widest uppercase text-right">TIADA SASARAN</div>'}`;
+                container.appendChild(row);
+            });
+        }
+
+        function renderAnalisa2() {
+            const container = document.getElementById('ptjCategoryPerformance');
+            container.innerHTML = '';
+            const p = document.getElementById('filterPlatform').value;
+            if (p === 'KOSPEN WOW') {
+                const cats = [{ id: 'PKD', label: 'PKD', color: 'bg-emerald-500' }, { id: 'Hospital', label: 'Hospital', color: 'bg-blue-500' }, { id: 'PKPD', label: 'Pergigian', color: 'bg-rose-500' }];
+                cats.forEach(cat => {
+                    const actual = filteredData.filter(r => r.PTJ_TYPE === cat.id).length;
+                    const row = document.createElement('div');
+                    row.className = 'bg-white/70 p-6 rounded-[2rem] border border-slate-100 flex justify-between items-center shadow-sm';
+                    row.innerHTML = `<h4 class="font-black text-slate-800 uppercase tracking-tighter text-sm">${cat.label}</h4><div class="text-right"><div class="font-black text-slate-900 text-2xl md:text-3xl">${actual.toLocaleString()}</div><div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Saringan</div></div>`;
+                    container.appendChild(row);
+                });
+            } else {
+                const counts = {}; filteredData.forEach(r => { const key = (p === 'KOSPEN Community' ? r.LOCALITY : r.FACILITY_NAME) || 'Tiada Nama'; counts[key] = (counts[key] || 0) + 1; });
+                const list = Object.entries(counts).sort((a,b) => b[1] - a[1]).slice(0, 50);
+                list.forEach(([name, count]) => {
+                    const row = document.createElement('div');
+                    row.className = 'bg-white/70 p-4 rounded-xl flex justify-between items-center border border-slate-100 shadow-sm';
+                    row.innerHTML = `<span class="font-bold text-slate-700 truncate pr-4 text-[10px] md:text-[11px] uppercase tracking-tight">${name}</span><span class="font-black text-slate-900 text-sm">${count.toLocaleString()}</span>`;
+                    container.appendChild(row);
+                });
+            }
+        }
+
+        function renderAnalisaCharts() {
+            document.getElementById('findingTotal').innerText = filteredData.length.toLocaleString();
+            updateChart('chartGender', 'GENDER', 'pie');
+            updateChart('chartEthnicity', 'ETHNICITY', 'bar', true);
+            
+            // Kumpulan Umur dengan Isihan Khas
+            const ageSort = (a, b) => {
+                const getNum = (s) => parseInt(s.match(/\d+/) || 0);
+                return getNum(a) - getNum(b);
+            };
+            updateChart('chartAge', 'AGE_GROUP', 'bar', false, [], ageSort);
+
+            updateChart('chartDepression', 'MENTAL_HEALTH_DEPRESSION', 'pie');
+            updateChart('chartAnxiety', 'MENTAL_HEALTH_ANXIETY', 'pie');
+            updateChart('chartSmoking', 'SMOKING', 'pie', false, ['SMOKING', 'SMOKER']);
+            updateChart('chartAlcohol', 'ALCOHOL_AUDIT', 'pie');
+            updateChart('chartBMI', 'BMI_CLASSIFICATION', 'bar');
+            updateChart('chartGlucose', 'BLOOD_GLUCOSE_CLASSIFICATION', 'bar');
+            updateChart('chartBP', 'BLOOD_PRESSURE_CLASSIFICATION', 'bar');
+            updateChart('chartCholesterol', 'BLOOD_CHOLESTEROL_CLASSIFICATION', 'bar');
+            updateChart('chartNCD', 'NCD_RISK_CLASSIFICATION', 'bar');
+        }
+
+        function updateChart(id, col, type, horiz = false, fallbackCols = [], customSort = null) {
+            const ctx = document.getElementById(id).getContext('2d');
+            const counts = {}; 
+            filteredData.forEach(r => { 
+                let v = r[col];
+                if (!v && fallbackCols.length > 0) { for (let f of fallbackCols) { if (r[f]) { v = r[f]; break; } } }
+                v = v || 'TIADA REKOD'; 
+                counts[v] = (counts[v] || 0) + 1; 
+            });
+
+            let labels = Object.keys(counts); 
+            if (customSort) labels.sort(customSort);
+            else labels.sort((a,b) => counts[b] - counts[a]);
+
+            const data = labels.map(l => counts[l]);
+            const total = data.reduce((a, b) => a + b, 0);
+            if (charts[id]) charts[id].destroy();
+            const colors = ['#2563eb', '#db2777', '#f59e0b', '#10b981', '#6366f1', '#f43f5e', '#8b5cf6', '#06b6d4', '#475569', '#14b8a6', '#f97316'];
+            
+            charts[id] = new Chart(ctx, {
+                type: type,
+                data: { labels: labels, datasets: [{ data: data, backgroundColor: colors, borderWidth: 0, borderRadius: 8 }] },
+                options: {
+                    responsive: true, maintainAspectRatio: false, indexAxis: horiz ? 'y' : 'x',
+                    plugins: {
+                        legend: { display: type === 'pie', position: 'bottom', labels: { font: { size: 9, weight: 'bold' }, padding: 15 } },
+                        tooltip: { callbacks: { label: (c) => ` ${c.raw.toLocaleString()} (${total > 0 ? ((c.raw / total) * 100).toFixed(1) : 0}%)` } },
+                        datalabels: {
+                            display: (context) => (context.dataset.data[context.dataIndex] / total * 100) > 3,
+                            formatter: (v) => `${v}\n(${(v / total * 100).toFixed(1)}%)`,
+                            color: type === 'pie' ? '#fff' : '#1e293b',
+                            font: { weight: '900', size: 9 },
+                            textAlign: 'center',
+                            anchor: type === 'pie' ? 'center' : 'end',
+                            align: type === 'pie' ? 'center' : (horiz ? 'right' : 'top'),
+                            offset: type === 'pie' ? 0 : 5,
+                            textStrokeColor: type === 'pie' ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.8)',
+                            textStrokeWidth: 2,
+                            clamp: true
+                        }
+                    },
+                    layout: { padding: { top: 30, right: 40, left: 10, bottom: 40 } },
+                    scales: type === 'bar' ? { 
+                        y: { beginAtZero: true, grid: { display: false }, ticks: { font: { size: 9, weight: 'bold' } } }, 
+                        x: { 
+                            grid: { display: false }, 
+                            ticks: { 
+                                font: { size: 8, weight: '900' },
+                                autoSkip: false,
+                                maxRotation: 45,
+                                minRotation: 45
+                            } 
+                        } 
+                    } : {}
+                }
+            });
+        }
+        function showLoader() { document.getElementById('loadingOverlay').classList.remove('opacity-0', 'pointer-events-none'); }
+        function hideLoader() { document.getElementById('loadingOverlay').classList.add('opacity-0', 'pointer-events-none'); }
+    </script>
+</body>
+</html>

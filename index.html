@@ -123,7 +123,7 @@
                             <div class="p-2.5 bg-blue-500/30 rounded-xl">
                                 <i data-lucide="users" class="text-blue-100 w-5 h-5"></i>
                             </div>
-                            <span class="font-black text-blue-100 text-[10px] md:text-xs tracking-[0.2em] uppercase">Saringan Sebenar</span>
+                            <span class="font-black text-blue-100 text-[10px] md:text-xs tracking-[0.2em] uppercase">Saringan Semasa</span>
                         </div>
                         <div id="statActual" class="text-4xl md:text-6xl font-black text-white tracking-tighter">0</div>
                         <div class="text-[10px] text-blue-200/50 mt-3 font-bold uppercase tracking-widest">Individu Disaring</div>
@@ -134,7 +134,7 @@
                             <div class="p-2.5 bg-purple-500/30 rounded-xl">
                                 <i data-lucide="target" class="text-purple-100 w-5 h-5"></i>
                             </div>
-                            <span class="font-black text-blue-100 text-[10px] md:text-xs tracking-[0.2em] uppercase">Sasaran Daerah</span>
+                            <span class="font-black text-blue-100 text-[10px] md:text-xs tracking-[0.2em] uppercase">Sasaran 2026</span>
                         </div>
                         <div id="statTarget" class="text-4xl md:text-6xl font-black text-white tracking-tighter">0</div>
                         <div id="statTargetSub" class="text-[10px] text-blue-200/50 mt-3 font-bold uppercase tracking-widest">Berdasarkan Ketetapan</div>
@@ -165,7 +165,7 @@
                 <div class="p-2.5 bg-blue-50 rounded-xl">
                     <i data-lucide="filter" class="w-5 h-5 text-blue-600"></i>
                 </div>
-                <h3 class="font-black text-slate-800 text-sm md:text-lg uppercase tracking-tight">Kriteria Penapis Data</h3>
+                <h3 class="font-black text-slate-800 text-sm md:text-lg uppercase tracking-tight">Penapis Data (Filter)</h3>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
                 <div class="space-y-2.5">
@@ -214,7 +214,7 @@
             <div class="glass-card rounded-[2.5rem] p-8 md:p-10 border border-white/40 space-y-8 animate-fade-in shadow-xl">
                 <div class="flex items-center gap-4">
                     <div class="p-3 bg-indigo-100 rounded-2xl shadow-inner"><i data-lucide="layout-grid" class="w-6 h-6 text-indigo-600"></i></div>
-                    <h3 id="labelAnalisa2" class="text-2xl font-black text-slate-900 tracking-tighter uppercase leading-none">Kategori & Lokaliti</h3>
+                    <h3 id="labelAnalisa2" class="text-2xl font-black text-slate-900 tracking-tighter uppercase leading-none">Fasiliti / Lokaliti</h3>
                 </div>
                 <div id="ptjCategoryPerformance" class="space-y-4 max-h-[500px] overflow-y-auto custom-scrollbar pr-4"></div>
             </div>
@@ -260,7 +260,7 @@
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
                     <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm"><h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">B1. Status Depresi</h5><div class="chart-container"><canvas id="chartDepression"></canvas></div></div>
-                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm"><h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">B2. Status Anxierti</h5><div class="chart-container"><canvas id="chartAnxiety"></canvas></div></div>
+                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm"><h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">B2. Status Anxieti</h5><div class="chart-container"><canvas id="chartAnxiety"></canvas></div></div>
                     <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm"><h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">B3. Status Merokok</h5><div class="chart-container"><canvas id="chartSmoking"></canvas></div></div>
                     <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm"><h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">B4. Penggunaan Alkohol</h5><div class="chart-container"><canvas id="chartAlcohol"></canvas></div></div>
                     <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm"><h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">B5. Status BMI</h5><div class="chart-container"><canvas id="chartBMI"></canvas></div></div>
@@ -274,7 +274,7 @@
 
         <footer class="text-center pb-24 pt-10 px-6">
             <p class="text-slate-400 font-black text-[10px] uppercase tracking-[0.4em] mb-3">Unit Kawalan Penyakit Tidak Berjangkit JKN Kedah</p>
-            <p class="text-slate-300 font-medium text-[9px] md:text-xs italic tracking-widest leading-loose">Visualisasi Data NHSI &copy; 2026<br>Sistem Automasi Data Google Sheets</p>
+            <p class="text-slate-300 font-medium text-[9px] md:text-xs italic tracking-widest leading-loose">Analisa Dapatan NHSI &copy; 2026<br>Pemantauan Prestasi Sarinan NHSI 2026 JKN Kedah</p>
         </footer>
 
     </div>
@@ -492,7 +492,7 @@
                 document.getElementById('statTargetSub').innerText = 'LOKALITI/FASILITI DIPILIH';
             } else {
                 document.getElementById('statTarget').innerText = target.toLocaleString();
-                document.getElementById('statTargetSub').innerText = 'Sasaran Mengikut Kriteria';
+                document.getElementById('statTargetSub').innerText = 'Sasaran Individu Perlu Disaring';
                 if (target > 0) {
                     const rate = (actual / target * 100);
                     document.getElementById('statRate').innerText = rate.toFixed(1) + '%';
@@ -523,7 +523,7 @@
                 const color = rate >= 100 ? 'bg-emerald-500' : (rate >= 80 ? 'bg-blue-500' : 'bg-amber-500');
                 const row = document.createElement('div');
                 row.className = 'bg-white/70 p-4 rounded-2xl border border-slate-100 space-y-2 shadow-sm';
-                row.innerHTML = `<div class="flex justify-between items-end"><span class="font-black text-slate-800 text-[11px] uppercase tracking-tighter">${d}</span><div class="text-right"><span class="font-black text-slate-900">${actual.toLocaleString()}</span>${target > 0 ? `<span class="text-slate-400 text-[10px] ml-1 font-bold">/ ${target.toLocaleString()}</span>` : ''}</div></div>${target > 0 ? `<div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden shadow-inner"><div class="h-full ${color} transition-all duration-1000 shadow-lg" style="width: ${Math.min(rate, 100)}%"></div></div><div class="text-[9px] font-black text-blue-600 text-right uppercase tracking-[0.2em]">${rate.toFixed(1)}% SIAP</div>` : '<div class="text-[9px] text-slate-300 font-bold italic tracking-widest uppercase text-right">TIADA SASARAN</div>'}`;
+                row.innerHTML = `<div class="flex justify-between items-end"><span class="font-black text-slate-800 text-[11px] uppercase tracking-tighter">${d}</span><div class="text-right"><span class="font-black text-slate-900">${actual.toLocaleString()}</span>${target > 0 ? `<span class="text-slate-400 text-[10px] ml-1 font-bold">/ ${target.toLocaleString()}</span>` : ''}</div></div>${target > 0 ? `<div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden shadow-inner"><div class="h-full ${color} transition-all duration-1000 shadow-lg" style="width: ${Math.min(rate, 100)}%"></div></div><div class="text-[9px] font-black text-blue-600 text-right uppercase tracking-[0.2em]">${rate.toFixed(1)}% DISARING</div>` : '<div class="text-[9px] text-slate-300 font-bold italic tracking-widest uppercase text-right">TIADA SASARAN</div>'}`;
                 container.appendChild(row);
             });
         }

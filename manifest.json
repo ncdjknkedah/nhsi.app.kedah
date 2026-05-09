@@ -1,0 +1,17 @@
+{
+  "name": "NHSI Analytics Kedah",
+  "short_name": "NHSI Kedah",
+  "description": "Dashboard Analitik Bersepadu NHSI JKN Kedah",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#1e3a8a",
+  "icons": [
+    {
+      "src": "nhsi_app_icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

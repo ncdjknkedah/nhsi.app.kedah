@@ -281,6 +281,7 @@
         let filteredData = [];
         let districts = [];
         let targets = {}; 
+        let localityTargets = {};
         let charts = {};
 
         window.onload = async () => {
@@ -331,20 +332,57 @@
         function parseTargetData(csv) {
             return new Promise(resolve => {
                 Papa.parse(csv, {
-                    header: true,
+                    header: false,
                     skipEmptyLines: true,
                     complete: results => {
                         targets = {};
+                        localityTargets = {};
+                        let isLocalitySection = false;
+                        
                         results.data.forEach(row => {
-                            let d = (row.DAERAH || row.Daerah || "").trim().toUpperCase();
-                            if (d) {
-                                targets[d] = {
-                                    PKD: parseInt(row.TARGET_PKD || row.PKD || 0),
-                                    Hospital: parseInt(row.TARGET_HOSPITAL || row.Hospital || 0),
-                                    PKPD: parseInt(row.TARGET_PKPD || row.PKPD || 0),
-                                    KOSPEN: parseInt(row.TARGET_KOSPEN || row.KOSPEN || row['KOSPEN '] || 0),
-                                    MYVAS: parseInt(row.TARGET_MYVAS || row.MYVAS || 0)
-                                };
+                            if (!row || row.length === 0) return;
+                            
+                            const val0 = (row[0] || "").trim().toUpperCase();
+                            const val1 = (row[1] || "").trim().toUpperCase();
+                            
+                            // Check if entering the KOSPEN Community targets table
+                            if (val0.includes("TARGETS KOSPEN") || (val0 === "DAERAH" && val1 === "LOKALITI")) {
+                                isLocalitySection = true;
+                                return;
+                            }
+                            
+                            if (!isLocalitySection) {
+                                let d = (row[0] || "").trim().toUpperCase();
+                                if (d && d !== 'DAERAH' && d !== 'KEDAH') {
+                                    targets[d] = {
+                                        PKD: parseInt(row[1]) || 0,
+                                        Hospital: parseInt(row[2]) || 0,
+                                        PKPD: parseInt(row[3]) || 0,
+                                        KOSPEN: parseInt(row[4]) || 0,
+                                        MYVAS: parseInt(row[5]) || 0
+                                    };
+                                }
+                            } else {
+                                // Locality targets section
+                                // Map Column B (index 1) -> Column D (index 3)
+                                let loc1 = (row[1] || "").trim().toUpperCase();
+                                let targetVal1Str = (row[3] || "").trim();
+                                if (loc1 && loc1 !== 'LOKALITI') {
+                                    let targetVal1 = parseInt(targetVal1Str);
+                                    if (!isNaN(targetVal1)) {
+                                        localityTargets[loc1] = targetVal1;
+                                    }
+                                }
+                                
+                                // Map Column F (index 5) -> Column H (index 7)
+                                let loc2 = (row[5] || "").trim().toUpperCase();
+                                let targetVal2Str = (row[7] || "").trim();
+                                if (loc2 && loc2 !== 'LOKALITI2' && loc2 !== 'LOKALITI') {
+                                    let targetVal2 = parseInt(targetVal2Str);
+                                    if (!isNaN(targetVal2)) {
+                                        localityTargets[loc2] = targetVal2;
+                                    }
+                                }
                             }
                         });
                         resolve();
@@ -440,6 +478,9 @@
             const d = document.getElementById('filterDistrict').value;
             const ptj = document.getElementById('filterPTJ').value;
             const fac = document.getElementById('filterFacility').value;
+            
+            let showTarget = true;
+            
             if (fac === 'ALL') {
                 const getTargetForDistrict = (distName) => {
                     const t = targets[distName.toUpperCase()] || { PKD:0, Hospital:0, PKPD:0, MYVAS:0, KOSPEN:0 };
@@ -451,16 +492,29 @@
                 };
                 if (d === 'ALL') districts.forEach(dn => target += getTargetForDistrict(dn));
                 else target = getTargetForDistrict(d);
+            } else {
+                if (p === 'KOSPEN Community') {
+                    const normalizedFac = fac.toUpperCase().trim();
+                    if (localityTargets[normalizedFac] !== undefined && localityTargets[normalizedFac] > 0) {
+                        target = localityTargets[normalizedFac];
+                    } else {
+                        showTarget = false;
+                    }
+                } else {
+                    showTarget = false;
+                }
             }
+            
             document.getElementById('statActual').innerText = actual.toLocaleString();
-            if (fac !== 'ALL') {
+            
+            if (!showTarget) {
                 document.getElementById('statTarget').innerText = '-';
                 document.getElementById('statRate').innerText = '0%';
                 document.getElementById('statRateBar').style.width = '0%';
-                document.getElementById('statTargetSub').innerText = 'LOKALITI/FASILITI DIPILIH';
+                document.getElementById('statTargetSub').innerText = p === 'KOSPEN Community' ? 'LOKALITI TIADA SASARAN' : 'LOKALITI/FASILITI DIPILIH';
             } else {
                 document.getElementById('statTarget').innerText = target.toLocaleString();
-                document.getElementById('statTargetSub').innerText = 'Sasaran Mengikut Kriteria';
+                document.getElementById('statTargetSub').innerText = fac === 'ALL' ? 'Sasaran Mengikut Kriteria' : 'Sasaran Lokaliti';
                 if (target > 0) {
                     const rate = (actual / target * 100);
                     document.getElementById('statRate').innerText = rate.toFixed(1) + '%';
@@ -513,9 +567,18 @@
                 const counts = {}; filteredData.forEach(r => { const key = (p === 'KOSPEN Community' ? r.LOCALITY : r.FACILITY_NAME) || 'Tiada Nama'; counts[key] = (counts[key] || 0) + 1; });
                 const list = Object.entries(counts).sort((a,b) => b[1] - a[1]).slice(0, 50);
                 list.forEach(([name, count]) => {
+                    let targetInfo = '';
+                    if (p === 'KOSPEN Community') {
+                        const normName = name.toUpperCase().trim();
+                        const locTarget = localityTargets[normName];
+                        if (locTarget !== undefined && locTarget > 0) {
+                            const pct = (count / locTarget * 100).toFixed(1);
+                            targetInfo = `<span class="text-[9px] text-slate-400 ml-1 font-bold">/ Sasaran: ${locTarget} (${pct}%)</span>`;
+                        }
+                    }
                     const row = document.createElement('div');
                     row.className = 'bg-white/70 p-4 rounded-xl flex justify-between items-center border border-slate-100 shadow-sm';
-                    row.innerHTML = `<span class="font-bold text-slate-700 truncate pr-4 text-[10px] md:text-[11px] uppercase tracking-tight">${name}</span><span class="font-black text-slate-900 text-sm">${count.toLocaleString()}</span>`;
+                    row.innerHTML = `<span class="font-bold text-slate-700 truncate pr-4 text-[10px] md:text-[11px] uppercase tracking-tight">${name} ${targetInfo}</span><span class="font-black text-slate-900 text-sm">${count.toLocaleString()}</span>`;
                     container.appendChild(row);
                 });
             }

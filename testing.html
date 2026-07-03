@@ -179,7 +179,7 @@
                     </label>
                     <label class="inline-flex items-center gap-2 bg-slate-50 border-2 border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-slate-700 text-xs cursor-pointer hover:bg-slate-100 transition-all select-none">
                         <input type="checkbox" id="chkOthers" value="OTHERS" checked onchange="applyFilters()" class="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500">
-                        Others
+                        Others / Asthma
                     </label>
                 </div>
             </div>
@@ -345,34 +345,27 @@
                             if (fType.includes('HOSPITAL')) ptj = 'Hospital';
                             else if (fType.includes('DENTAL')) ptj = 'PKPD';
                             
-                            // Ekstrak & standardkan data komorbiditi daripada kolum baharu Google Sheets
-                            // Kita gunakan nilai fallback sekiranya terdapat perbezaan nama kolum kecil (e.g. DM vs DIABETES)
-                            const isHealthy = parseInt(r.HEALTHY || r.SIHAT_SEPENUHNYA || r.SIHAT) === 1;
-                            const hasDM = parseInt(r.DM || r.DIABETES_MELLITUS || r.DIABETES) === 1;
-                            const hasHT = parseInt(r.HT || r.HYPERTENSION || r.HIPERTENSI) === 1;
-                            const hasHC = parseInt(r.HC || r.HYPERCHOLESTEROLEMIA || r.KOLESTEROL) === 1;
-                            const hasAsthma = parseInt(r.ASTHMA_COPD || r.ASTHMA) === 1;
-                            const hasOthers = parseInt(r.OTHERS || r.LAIN_LAIN) === 1;
+                            // Padanan TEPAT dengan pengepala kolum Google Sheets anda
+                            const hasDM = parseInt(r["Diabetes Mellitus (DM)"]) === 1;
+                            const hasHT = parseInt(r["Hypertension (HT)"]) === 1;
+                            const hasHC = parseInt(r["Hypercholesterolemia (HC)"]) === 1;
+                            const hasAsthma = parseInt(r["Asthma/COPD"]) === 1;
+                            const hasOthers = parseInt(r["Others (Termasuk Stroke, Coronary Heart Disease, dll.)"]) === 1;
+                            const isHealthy = parseInt(r["Sihat Sepenuhnya (Healthy)"]) === 1;
 
-                            // Kira total penyakit berasaskan kolum penanda
-                            let diseaseCount = 0;
-                            if (hasDM) diseaseCount++;
-                            if (hasHT) diseaseCount++;
-                            if (hasHC) diseaseCount++;
-                            if (hasAsthma) diseaseCount++;
-                            if (hasOthers) diseaseCount++;
+                            // Membaca lajur "Jumlah Penyakit" secara dinamik
+                            const diseaseCount = parseInt(r["Jumlah Penyakit"]) || 0;
 
-                            // Kelaskan Kategori Bilangan Komorbiditi
+                            // Klasifikasi Kategori Bilangan Komorbiditi (Untuk Carta B2)
                             let comorbidityCat = 'Sihat Sepenuhnya';
-                            if (!isHealthy && diseaseCount > 0) {
-                                if (diseaseCount === 1) comorbidityCat = '1 Komorbiditi';
-                                else if (diseaseCount === 2) comorbidityCat = '2 Komorbiditi';
-                                else if (diseaseCount > 2) comorbidityCat = '>2 Komorbiditi';
-                            } else if (isHealthy) {
+                            if (isHealthy) {
                                 comorbidityCat = 'Sihat Sepenuhnya';
-                            } else if (diseaseCount === 0 && (r.MEDICAL_HISTORY || "").trim() !== "No") {
-                                // Fallback jika kolum penanda tiada tetapi teks perubatan wujud
+                            } else if (diseaseCount === 1) {
                                 comorbidityCat = '1 Komorbiditi';
+                            } else if (diseaseCount === 2) {
+                                comorbidityCat = '2 Komorbiditi';
+                            } else if (diseaseCount > 2) {
+                                comorbidityCat = '>2 Komorbiditi';
                             }
 
                             return { 
@@ -526,7 +519,7 @@
             const ptj = document.getElementById('filterPTJ').value;
             const fac = document.getElementById('filterFacility').value;
             
-            // Dapatkan kriteria checklist komorbiditi
+            // Mengambil status checklist komorbiditi
             const chkHealthy = document.getElementById('chkHealthy').checked;
             const chkDM = document.getElementById('chkDM').checked;
             const chkHT = document.getElementById('chkHT').checked;
@@ -543,8 +536,7 @@
                     if (p !== 'KOSPEN Community' && r.FACILITY_NAME !== fac) return false;
                 }
 
-                // 2. Checklist Komorbiditi Logik (OR Matching)
-                // Individu akan dipaparkan jika MANA-MANA kategori penyakit yang dihidapinya ditanda pada checklist
+                // 2. Checklist Komorbiditi (OR Match Logic)
                 let matchComorbidity = false;
                 if (chkHealthy && r._IS_HEALTHY) matchComorbidity = true;
                 if (chkDM && r._HAS_DM) matchComorbidity = true;
@@ -686,14 +678,14 @@
             };
             updateChart('chartAge', 'AGE_GROUP', 'bar', false, [], ageSort);
 
-            // SECTION B: STATUS KESIHATAN (PENYAKIT BEBAN & BILANGAN KOMORBIDITI)
+            // SECTION B: STATUS KESIHATAN
             renderComorbidityTypeChart();
             updateChart('chartComorbidityCounts', '_COMORBIDITY_COUNT_CAT', 'pie', false, [], (a,b) => {
                 const order = { 'Sihat Sepenuhnya': 1, '1 Komorbiditi': 2, '2 Komorbiditi': 3, '>2 Komorbiditi': 4 };
                 return (order[a] || 9) - (order[b] || 9);
             });
 
-            // SECTION C (SEBELUMNYA B)
+            // SECTION C
             updateChart('chartDepression', 'MENTAL_HEALTH_DEPRESSION', 'pie');
             updateChart('chartAnxiety', 'MENTAL_HEALTH_ANXIETY', 'pie');
             updateChart('chartSmoking', 'SMOKING', 'pie', false, ['SMOKING', 'SMOKER']);
@@ -705,19 +697,19 @@
             updateChart('chartNCD', 'NCD_RISK_CLASSIFICATION', 'bar');
         }
 
-        // Fungsi tersuai untuk mengira & memaparkan jenis komorbiditi secara berasingan (Kerana 1 orang boleh ada >1 jenis penyakit)
+        // Agregasi manual khusus untuk carta pai pecahan jenis penyakit komorbiditi
         function renderComorbidityTypeChart() {
             const id = 'chartComorbidityTypes';
             const ctx = document.getElementById(id).getContext('2d');
             
-            let counts = { 'Sihat Sepenuhnya': 0, 'Diabetes Mellitus': 0, 'Hypertension': 0, 'Hypercholesterolemia': 0, 'Others': 0 };
+            let counts = { 'Sihat Sepenuhnya': 0, 'Diabetes Mellitus': 0, 'Hypertension': 0, 'Hypercholesterolemia': 0, 'Others / Asthma': 0 };
             
             filteredData.forEach(r => {
                 if (r._IS_HEALTHY) counts['Sihat Sepenuhnya']++;
                 if (r._HAS_DM) counts['Diabetes Mellitus']++;
                 if (r._HAS_HT) counts['Hypertension']++;
                 if (r._HAS_HC) counts['Hypercholesterolemia']++;
-                if (r._HAS_OTHERS || r._HAS_ASTHMA) counts['Others']++;
+                if (r._HAS_OTHERS || r._HAS_ASTHMA) counts['Others / Asthma']++;
             });
 
             const labels = Object.keys(counts);

@@ -50,7 +50,23 @@
         
         <div id="loadingOverlay" class="fixed inset-0 bg-white/95 z-[100] flex flex-col items-center justify-center transition-all duration-500">
             <div class="loader ease-linear rounded-full border-4 border-slate-100 h-12 w-12 md:h-16 md:w-16 mb-6"></div>
-            <p class="text-slate-800 font-black text-lg md:text-xl tracking-tight text-center px-6 uppercase">Menyusun Analisa NHSI Kedah...</p>
+            <p class="text-slate-800 font-black text-lg md:text-xl tracking-tight text-center px-6 uppercase">Data Saringan NHSI Kedah Sedang Diakses. Sila Tunggu Sebentar...</p>
+        </div>
+
+        <!-- MODAL PEMBESARAN CARTA -->
+        <div id="chartModal" onclick="closeChartModal(event)" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[200] hidden flex flex-col items-center justify-center p-4 md:p-10 transition-all duration-300">
+            <div onclick="event.stopPropagation()" class="bg-white w-full max-w-5xl rounded-[2.5rem] p-6 md:p-10 relative shadow-2xl space-y-6 animate-fade-in">
+                <div class="flex justify-between items-center border-b border-slate-100 pb-4">
+                    <h3 id="modalChartTitle" class="text-xl md:text-2xl font-black text-slate-900 uppercase tracking-tight">Carta Membesar</h3>
+                    <button onclick="closeChartModal(null, true)" class="p-2.5 bg-slate-100 hover:bg-slate-200 rounded-2xl transition">
+                        <i data-lucide="x" class="w-6 h-6 text-slate-700"></i>
+                    </button>
+                </div>
+                <div class="w-full h-[500px] relative">
+                    <canvas id="modalCanvas"></canvas>
+                </div>
+                <p class="text-center text-[10px] text-slate-400 font-bold uppercase tracking-widest">Klik di luar kotak atau butang (X) untuk tutup</p>
+            </div>
         </div>
 
         <header class="bg-gradient-to-br from-blue-950 via-blue-900 to-indigo-900 rounded-[2rem] md:rounded-[3rem] p-6 md:p-12 text-white shadow-2xl relative overflow-hidden">
@@ -92,7 +108,7 @@
                             <div class="p-2.5 bg-purple-500/30 rounded-xl">
                                 <i data-lucide="target" class="text-purple-100 w-5 h-5"></i>
                             </div>
-                            <span class="font-black text-blue-100 text-[10px] md:text-xs tracking-[0.2em] uppercase">Sasaran Daerah</span>
+                            <span class="font-black text-blue-100 text-[10px] md:text-xs tracking-[0.2em] uppercase">Sasaran</span>
                         </div>
                         <div id="statTarget" class="text-4xl md:text-6xl font-black text-white tracking-tighter">0</div>
                         <div id="statTargetSub" class="text-[10px] text-blue-200/50 mt-3 font-bold uppercase tracking-widest">Berdasarkan Ketetapan</div>
@@ -148,6 +164,7 @@
                         <option value="PKD">PKD (Klinik Kesihatan)</option>
                         <option value="Hospital">Hospital</option>
                         <option value="PKPD">Pergigian</option>
+                        <option value="OTHERS">Lain-lain</option>
                     </select>
                 </div>
                 <div class="space-y-2.5">
@@ -203,6 +220,7 @@
             </div>
         </div>
 
+        <!-- ANALISA 3: DAPATAN SARINGAN -->
         <div class="glass-card rounded-[3rem] p-8 md:p-14 border border-white/40 space-y-16 animate-fade-in shadow-2xl relative overflow-hidden bg-white/80">
             <div class="flex items-center gap-5 relative z-10">
                 <div class="p-4 bg-emerald-100 rounded-[2rem] shadow-inner">
@@ -219,15 +237,18 @@
                     <h4 class="text-2xl font-black text-slate-800 uppercase tracking-tighter">A. Sosiodemografi</h4>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
-                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm hover:shadow-md transition-all">
+                    <div ondblclick="openChartModal('chartGender', 'A1. Jantina')" class="cursor-pointer group relative bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm hover:shadow-md transition-all">
+                        <span class="absolute top-4 right-6 text-[9px] font-black uppercase tracking-wider text-blue-500 bg-blue-50 px-2.5 py-1 rounded-full opacity-0 group-hover:opacity-100 transition">Double-click untuk besarkan</span>
                         <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">A1. Jantina</h5>
                         <div class="chart-container"><canvas id="chartGender"></canvas></div>
                     </div>
-                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm hover:shadow-md transition-all">
+                    <div ondblclick="openChartModal('chartEthnicity', 'A2. Bangsa')" class="cursor-pointer group relative bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm hover:shadow-md transition-all">
+                        <span class="absolute top-4 right-6 text-[9px] font-black uppercase tracking-wider text-blue-500 bg-blue-50 px-2.5 py-1 rounded-full opacity-0 group-hover:opacity-100 transition">Double-click untuk besarkan</span>
                         <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">A2. Bangsa</h5>
                         <div class="chart-container"><canvas id="chartEthnicity"></canvas></div>
                     </div>
-                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm hover:shadow-md transition-all">
+                    <div ondblclick="openChartModal('chartAge', 'A3. Kumpulan Umur')" class="cursor-pointer group relative bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm hover:shadow-md transition-all">
+                        <span class="absolute top-4 right-6 text-[9px] font-black uppercase tracking-wider text-blue-500 bg-blue-50 px-2.5 py-1 rounded-full opacity-0 group-hover:opacity-100 transition">Double-click untuk besarkan</span>
                         <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">A3. Kumpulan Umur</h5>
                         <div class="chart-container"><canvas id="chartAge"></canvas></div>
                     </div>
@@ -239,11 +260,13 @@
                     <h4 class="text-2xl font-black text-slate-800 uppercase tracking-tighter">B. Status Kesihatan</h4>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
-                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                    <div ondblclick="openChartModal('chartComorbidityTypes', 'B1. Beban Penyakit Sedia Ada')" class="cursor-pointer group relative bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                        <span class="absolute top-4 right-6 text-[9px] font-black uppercase tracking-wider text-blue-500 bg-blue-50 px-2.5 py-1 rounded-full opacity-0 group-hover:opacity-100 transition">Double-click untuk besarkan</span>
                         <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">B1. Beban Penyakit Sedia Ada</h5>
                         <div class="chart-container"><canvas id="chartComorbidityTypes"></canvas></div>
                     </div>
-                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                    <div ondblclick="openChartModal('chartComorbidityCounts', 'B2. Bilangan Komorbiditi')" class="cursor-pointer group relative bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                        <span class="absolute top-4 right-6 text-[9px] font-black uppercase tracking-wider text-blue-500 bg-blue-50 px-2.5 py-1 rounded-full opacity-0 group-hover:opacity-100 transition">Double-click untuk besarkan</span>
                         <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">B2. Bilangan Komorbiditi</h5>
                         <div class="chart-container"><canvas id="chartComorbidityCounts"></canvas></div>
                     </div>
@@ -255,39 +278,48 @@
                     <h4 class="text-2xl font-black text-slate-800 uppercase tracking-tighter">C. Faktor Risiko dan Penyakit</h4>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
-                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                    <div ondblclick="openChartModal('chartDepression', 'C1. Status Depresi')" class="cursor-pointer group relative bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                        <span class="absolute top-4 right-6 text-[9px] font-black uppercase tracking-wider text-blue-500 bg-blue-50 px-2.5 py-1 rounded-full opacity-0 group-hover:opacity-100 transition">Double-click untuk besarkan</span>
                         <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">C1. Status Depresi</h5>
                         <div class="chart-container"><canvas id="chartDepression"></canvas></div>
                     </div>
-                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                    <div ondblclick="openChartModal('chartAnxiety', 'C2. Status Anxierti')" class="cursor-pointer group relative bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                        <span class="absolute top-4 right-6 text-[9px] font-black uppercase tracking-wider text-blue-500 bg-blue-50 px-2.5 py-1 rounded-full opacity-0 group-hover:opacity-100 transition">Double-click untuk besarkan</span>
                         <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">C2. Status Anxierti</h5>
                         <div class="chart-container"><canvas id="chartAnxiety"></canvas></div>
                     </div>
-                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                    <div ondblclick="openChartModal('chartSmoking', 'C3. Status Merokok')" class="cursor-pointer group relative bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                        <span class="absolute top-4 right-6 text-[9px] font-black uppercase tracking-wider text-blue-500 bg-blue-50 px-2.5 py-1 rounded-full opacity-0 group-hover:opacity-100 transition">Double-click untuk besarkan</span>
                         <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">C3. Status Merokok</h5>
                         <div class="chart-container"><canvas id="chartSmoking"></canvas></div>
                     </div>
-                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                    <div ondblclick="openChartModal('chartAlcohol', 'C4. Penggunaan Alkohol')" class="cursor-pointer group relative bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                        <span class="absolute top-4 right-6 text-[9px] font-black uppercase tracking-wider text-blue-500 bg-blue-50 px-2.5 py-1 rounded-full opacity-0 group-hover:opacity-100 transition">Double-click untuk besarkan</span>
                         <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">C4. Penggunaan Alkohol</h5>
                         <div class="chart-container"><canvas id="chartAlcohol"></canvas></div>
                     </div>
-                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                    <div ondblclick="openChartModal('chartBMI', 'C5. Status BMI')" class="cursor-pointer group relative bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                        <span class="absolute top-4 right-6 text-[9px] font-black uppercase tracking-wider text-blue-500 bg-blue-50 px-2.5 py-1 rounded-full opacity-0 group-hover:opacity-100 transition">Double-click untuk besarkan</span>
                         <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">C5. Status BMI</h5>
                         <div class="chart-container"><canvas id="chartBMI"></canvas></div>
                     </div>
-                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                    <div ondblclick="openChartModal('chartGlucose', 'C6. Gula Dalam Darah')" class="cursor-pointer group relative bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                        <span class="absolute top-4 right-6 text-[9px] font-black uppercase tracking-wider text-blue-500 bg-blue-50 px-2.5 py-1 rounded-full opacity-0 group-hover:opacity-100 transition">Double-click untuk besarkan</span>
                         <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">C6. Gula Dalam Darah</h5>
                         <div class="chart-container"><canvas id="chartGlucose"></canvas></div>
                     </div>
-                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                    <div ondblclick="openChartModal('chartBP', 'C7. Tekanan Darah')" class="cursor-pointer group relative bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                        <span class="absolute top-4 right-6 text-[9px] font-black uppercase tracking-wider text-blue-500 bg-blue-50 px-2.5 py-1 rounded-full opacity-0 group-hover:opacity-100 transition">Double-click untuk besarkan</span>
                         <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">C7. Tekanan Darah</h5>
                         <div class="chart-container"><canvas id="chartBP"></canvas></div>
                     </div>
-                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                    <div ondblclick="openChartModal('chartCholesterol', 'C8. Status Kolesterol')" class="cursor-pointer group relative bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                        <span class="absolute top-4 right-6 text-[9px] font-black uppercase tracking-wider text-blue-500 bg-blue-50 px-2.5 py-1 rounded-full opacity-0 group-hover:opacity-100 transition">Double-click untuk besarkan</span>
                         <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">C8. Status Kolesterol</h5>
                         <div class="chart-container"><canvas id="chartCholesterol"></canvas></div>
                     </div>
-                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm lg:col-span-1">
+                    <div ondblclick="openChartModal('chartNCD', 'C9. Risiko NCD')" class="cursor-pointer group relative bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm lg:col-span-1">
+                        <span class="absolute top-4 right-6 text-[9px] font-black uppercase tracking-wider text-blue-500 bg-blue-50 px-2.5 py-1 rounded-full opacity-0 group-hover:opacity-100 transition">Double-click untuk besarkan</span>
                         <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">C9. Risiko NCD</h5>
                         <div class="chart-container"><canvas id="chartNCD"></canvas></div>
                     </div>
@@ -313,6 +345,7 @@
         let targets = {}; 
         let localityTargets = {};
         let charts = {};
+        let modalChartInstance = null;
 
         window.onload = async () => {
             lucide.createIcons();
@@ -340,17 +373,28 @@
                     skipEmptyLines: true,
                     complete: results => {
                         rawData = results.data.map(r => {
-                            const fType = (r.FACILITY_TYPE || "").toUpperCase();
-                            let ptj = 'PKD';
-                            if (fType.includes('HOSPITAL')) ptj = 'Hospital';
-                            else if (fType.includes('DENTAL')) ptj = 'PKPD';
+                            const fType = (r.FACILITY_TYPE || "").trim().toUpperCase();
                             
-                            // Pembersihan nama fasiliti & lokaliti daripada jarak berlebihan
-                           const facilityName = (r.FACILITY_NAME || "").trim().replace(/\s+/g, ' ').toUpperCase();
-                           const localityName = (r.LOCALITY || "").trim().replace(/\s+/g, ' ').toUpperCase();
+                            let ptj = 'OTHERS';
+                            if (fType.includes('DENTAL')) {
+                                ptj = 'PKPD';
+                            } else if (fType.includes('HOSPITAL')) {
+                                ptj = 'Hospital';
+                            } else if (
+                                fType.includes('HEALTH CLINIC') || 
+                                fType.includes('DISTRICT HEALTH OFFICE') || 
+                                fType.includes('RURAL CLINIC') || 
+                                fType.includes('MATERNAL AND CHILD')
+                            ) {
+                                ptj = 'PKD';
+                            } else {
+                                ptj = 'OTHERS';
+                            }
+                            
+                            const facilityName = (r.FACILITY_NAME || "").trim().replace(/\s+/g, ' ').toUpperCase();
+                            const localityName = (r.LOCALITY || "").trim().replace(/\s+/g, ' ').toUpperCase();
+                            const facilityDistrict = (r.FACILITY_DISTRICT || "").trim().replace(/\s+/g, ' ').toUpperCase();
 
-
-                            // Padanan TEPAT dengan pengepala kolum Google Sheets
                             const hasDM = parseInt(r["Diabetes Mellitus (DM)"]) === 1;
                             const hasHT = parseInt(r["Hypertension (HT)"]) === 1;
                             const hasHC = parseInt(r["Hypercholesterolemia (HC)"]) === 1;
@@ -358,10 +402,8 @@
                             const hasOthers = parseInt(r["Others (Termasuk Stroke, Coronary Heart Disease, dll.)"]) === 1;
                             const isHealthy = parseInt(r["Sihat Sepenuhnya (Healthy)"]) === 1;
 
-                            // Membaca lajur "Jumlah Penyakit" secara dinamik
                             const diseaseCount = parseInt(r["Jumlah Penyakit"]) || 0;
 
-                            // Klasifikasi Kategori Bilangan Komorbiditi (Untuk Carta B2)
                             let comorbidityCat = 'Sihat Sepenuhnya';
                             if (isHealthy) {
                                 comorbidityCat = 'Sihat Sepenuhnya';
@@ -378,7 +420,7 @@
                                 FACILITY_NAME: facilityName,
                                 LOCALITY: localityName,
                                 PTJ_TYPE: ptj, 
-                                FACILITY_DISTRICT: (r.FACILITY_DISTRICT || "").trim(),
+                                FACILITY_DISTRICT: facilityDistrict,
                                 _IS_HEALTHY: isHealthy,
                                 _HAS_DM: hasDM,
                                 _HAS_HT: hasHT,
@@ -476,23 +518,21 @@
 
         function handlePlatformChange() {
             const p = document.getElementById('filterPlatform').value;
-            const ptjCont = document.getElementById('ptjFilterContainer');
             const labelFac = document.getElementById('labelFacility');
             const labelA2 = document.getElementById('labelAnalisa2');
-            if (p === 'KOSPEN WOW') {
-                ptjCont.style.display = 'block';
-                labelFac.innerText = 'Nama Fasiliti';
-                labelA2.innerText = 'Analisa 2: Kategori PTJ';
-            } else if (p === 'KOSPEN Community') {
-                ptjCont.style.display = 'none';
+            
+            document.getElementById('ptjFilterContainer').style.display = 'block';
+
+            if (p === 'KOSPEN Community') {
                 labelFac.innerText = 'Nama Lokaliti';
                 labelA2.innerText = 'Analisa 2: Mengikut Lokaliti';
-            } else {
-                ptjCont.style.display = 'none';
+            } else if (p === 'KOSPEN WOW') {
                 labelFac.innerText = 'Nama Fasiliti';
-                labelA2.innerText = 'Analisa 2: Mengikut Fasiliti';
+                labelA2.innerText = 'Analisa 2: Kategori PTJ';
+            } else {
+                labelFac.innerText = 'Nama Fasiliti';
+                labelA2.innerText = 'Analisa 2: Mengikut Fasiliti / Kategori PTJ';
             }
-            document.getElementById('filterPTJ').value = 'ALL';
             updateFacilityDropdown();
             applyFilters();
         }
@@ -508,7 +548,8 @@
             let data = rawData;
             if (p !== 'ALL') data = data.filter(r => r.PLATFORM === p);
             if (d !== 'ALL') data = data.filter(r => r.FACILITY_DISTRICT === d);
-            if (p === 'KOSPEN WOW' && ptj !== 'ALL') data = data.filter(r => r.PTJ_TYPE === ptj);
+            if (ptj !== 'ALL') data = data.filter(r => r.PTJ_TYPE === ptj);
+
             let list = [];
             if (p === 'KOSPEN Community') list = [...new Set(data.map(r => r.LOCALITY))].filter(Boolean).sort();
             else list = [...new Set(data.map(r => r.FACILITY_NAME))].filter(Boolean).sort();
@@ -526,7 +567,6 @@
             const ptj = document.getElementById('filterPTJ').value;
             const fac = document.getElementById('filterFacility').value;
             
-            // Mengambil status checklist komorbiditi
             const chkHealthy = document.getElementById('chkHealthy').checked;
             const chkDM = document.getElementById('chkDM').checked;
             const chkHT = document.getElementById('chkHT').checked;
@@ -536,17 +576,14 @@
             const allChecked = chkHealthy && chkDM && chkHT && chkHC && chkOthers;
 
             filteredData = rawData.filter(r => {
-                // 1. Demografik & Platform Filters
                 if (p !== 'ALL' && r.PLATFORM !== p) return false;
                 if (d !== 'ALL' && r.FACILITY_DISTRICT !== d) return false;
-                if (p === 'KOSPEN WOW' && ptj !== 'ALL' && r.PTJ_TYPE !== ptj) return false;
+                if (ptj !== 'ALL' && r.PTJ_TYPE !== ptj) return false;
                 if (fac !== 'ALL') {
                     if (p === 'KOSPEN Community' && r.LOCALITY !== fac) return false;
                     if (p !== 'KOSPEN Community' && r.FACILITY_NAME !== fac) return false;
                 }
 
-                // 2. Checklist Komorbiditi (OR Match Logic)
-                // Jika kesemua 5 checkbox dicentang, sertakan juga rekod tanpa status komorbiditi
                 if (allChecked) return true;
 
                 let matchComorbidity = false;
@@ -565,6 +602,19 @@
             renderAnalisaCharts();
         }
 
+        function calculateTargetForDistrict(distName, p, ptj) {
+            const t = targets[distName.toUpperCase()] || { PKD:0, Hospital:0, PKPD:0, MYVAS:0, KOSPEN:0 };
+            if (p === 'ALL') {
+                if (ptj === 'ALL') return (t.PKD + t.Hospital + t.PKPD + t.MYVAS + t.KOSPEN);
+                if (ptj === 'PKD') return (t.PKD + t.KOSPEN + t.MYVAS);
+                return (t[ptj] || 0);
+            }
+            if (p === 'MyVAS') return t.MYVAS;
+            if (p === 'KOSPEN Community') return t.KOSPEN;
+            if (p === 'KOSPEN WOW') return (ptj === 'ALL' ? (t.PKD + t.Hospital + t.PKPD) : (t[ptj] || 0));
+            return 0;
+        }
+
         function updateKPIs() {
             const actual = filteredData.length;
             let target = 0;
@@ -576,16 +626,8 @@
             let showTarget = true;
             
             if (fac === 'ALL') {
-                const getTargetForDistrict = (distName) => {
-                    const t = targets[distName.toUpperCase()] || { PKD:0, Hospital:0, PKPD:0, MYVAS:0, KOSPEN:0 };
-                    if (p === 'ALL') return (t.PKD + t.Hospital + t.PKPD + t.MYVAS + t.KOSPEN);
-                    if (p === 'MyVAS') return t.MYVAS;
-                    if (p === 'KOSPEN Community') return t.KOSPEN;
-                    if (p === 'KOSPEN WOW') return (ptj === 'ALL' ? (t.PKD + t.Hospital + t.PKPD) : (t[ptj] || 0));
-                    return 0;
-                };
-                if (d === 'ALL') districts.forEach(dn => target += getTargetForDistrict(dn));
-                else target = getTargetForDistrict(d);
+                if (d === 'ALL') districts.forEach(dn => target += calculateTargetForDistrict(dn, p, ptj));
+                else target = calculateTargetForDistrict(d, p, ptj);
             } else {
                 if (p === 'KOSPEN Community') {
                     const normalizedFac = fac.toUpperCase().trim();
@@ -629,12 +671,8 @@
             const curDistricts = Object.keys(counts).sort();
             curDistricts.forEach(d => {
                 const actual = counts[d];
-                const t = targets[d.toUpperCase()] || { PKD:0, Hospital:0, PKPD:0, MYVAS:0, KOSPEN:0 };
-                let target = 0;
-                if (p === 'ALL') target = (t.PKD + t.Hospital + t.PKPD + t.MYVAS + t.KOSPEN);
-                else if (p === 'MyVAS') target = t.MYVAS;
-                else if (p === 'KOSPEN Community') target = t.KOSPEN;
-                else if (p === 'KOSPEN WOW') target = (ptj === 'ALL' ? (t.PKD + t.Hospital + t.PKPD) : (t[ptj] || 0));
+                const target = calculateTargetForDistrict(d, p, ptj);
+                
                 const rate = target > 0 ? (actual / target * 100) : null;
                 const color = rate >= 100 ? 'bg-emerald-500' : (rate >= 80 ? 'bg-blue-500' : 'bg-amber-500');
                 const row = document.createElement('div');
@@ -648,8 +686,15 @@
             const container = document.getElementById('ptjCategoryPerformance');
             container.innerHTML = '';
             const p = document.getElementById('filterPlatform').value;
-            if (p === 'KOSPEN WOW') {
-                const cats = [{ id: 'PKD', label: 'PKD', color: 'bg-emerald-500' }, { id: 'Hospital', label: 'Hospital', color: 'bg-blue-500' }, { id: 'PKPD', label: 'Pergigian', color: 'bg-rose-500' }];
+            const ptj = document.getElementById('filterPTJ').value;
+
+            if (p === 'KOSPEN WOW' && ptj === 'ALL') {
+                const cats = [
+                    { id: 'PKD', label: 'PKD (Klinik Kesihatan)', color: 'bg-emerald-500' },
+                    { id: 'Hospital', label: 'Hospital', color: 'bg-blue-500' },
+                    { id: 'PKPD', label: 'Pergigian', color: 'bg-rose-500' },
+                    { id: 'OTHERS', label: 'Lain-lain', color: 'bg-amber-500' }
+                ];
                 cats.forEach(cat => {
                     const actual = filteredData.filter(r => r.PTJ_TYPE === cat.id).length;
                     const row = document.createElement('div');
@@ -658,8 +703,24 @@
                     container.appendChild(row);
                 });
             } else {
-                const counts = {}; filteredData.forEach(r => { const key = (p === 'KOSPEN Community' ? r.LOCALITY : r.FACILITY_NAME) || 'Tiada Nama'; counts[key] = (counts[key] || 0) + 1; });
-                const list = Object.entries(counts).sort((a,b) => b[1] - a[1]).slice(0, 50);
+                const counts = {}; 
+                filteredData.forEach(r => { 
+                    const key = (p === 'KOSPEN Community' ? r.LOCALITY : r.FACILITY_NAME) || 'TIADA NAMA'; 
+                    counts[key] = (counts[key] || 0) + 1; 
+                });
+
+                const list = Object.entries(counts).sort((a, b) => {
+                    const nameA = a[0].toUpperCase();
+                    const nameB = b[0].toUpperCase();
+                    const isPkdA = nameA.includes('PEJABAT KESIHATAN DAERAH');
+                    const isPkdB = nameB.includes('PEJABAT KESIHATAN DAERAH');
+
+                    if (isPkdA && !isPkdB) return -1;
+                    if (!isPkdA && isPkdB) return 1;
+
+                    return b[1] - a[1];
+                }).slice(0, 50);
+
                 list.forEach(([name, count]) => {
                     let targetInfo = '';
                     if (p === 'KOSPEN Community') {
@@ -697,19 +758,70 @@
                 return (order[a] || 9) - (order[b] || 9);
             });
 
-            // SECTION C
+            // SECTION C: FAKTOR RISIKO DAN PENYAKIT WITH CUSTOM SORTING
             updateChart('chartDepression', 'MENTAL_HEALTH_DEPRESSION', 'pie');
             updateChart('chartAnxiety', 'MENTAL_HEALTH_ANXIETY', 'pie');
             updateChart('chartSmoking', 'SMOKING', 'pie', false, ['SMOKING', 'SMOKER']);
             updateChart('chartAlcohol', 'ALCOHOL_AUDIT', 'pie');
-            updateChart('chartBMI', 'BMI_CLASSIFICATION', 'bar');
-            updateChart('chartGlucose', 'BLOOD_GLUCOSE_CLASSIFICATION', 'bar');
-            updateChart('chartBP', 'BLOOD_PRESSURE_CLASSIFICATION', 'bar');
+
+            // C5. Status BMI Sort Order: Underweight -> Normal Weight -> Overweight -> Obese-I -> Obese-II -> Obese-III
+            const bmiSort = (a, b) => {
+                const order = ['UNDERWEIGHT', 'NORMAL', 'OVERWEIGHT', 'OBESE-I', 'OBESE-II', 'OBESE-III', 'OBESE CLASS I', 'OBESE CLASS II', 'OBESE CLASS III'];
+                const getIndex = (s) => {
+                    const str = (s || '').toUpperCase();
+                    for (let i = 0; i < order.length; i++) {
+                        if (str.includes(order[i])) return i;
+                    }
+                    return 99;
+                };
+                return getIndex(a) - getIndex(b);
+            };
+            updateChart('chartBMI', 'BMI_CLASSIFICATION', 'bar', false, [], bmiSort);
+
+            // C6. Gula Dalam Darah Sort Order: Low Blood Glucose -> Normal Blood Glucose -> High Blood Glucose
+            const glucoseSort = (a, b) => {
+                const getIndex = (s) => {
+                    const str = (s || '').toUpperCase();
+                    if (str.includes('LOW')) return 1;
+                    if (str.includes('NORMAL')) return 2;
+                    if (str.includes('HIGH')) return 3;
+                    return 99;
+                };
+                return getIndex(a) - getIndex(b);
+            };
+            updateChart('chartGlucose', 'BLOOD_GLUCOSE_CLASSIFICATION', 'bar', false, [], glucoseSort);
+
+            // C7. Tekanan Darah Sort Order: Low Blood Pressure -> Normal Blood Pressure -> At Risk -> High Blood Pressure
+            const bpSort = (a, b) => {
+                const getIndex = (s) => {
+                    const str = (s || '').toUpperCase();
+                    if (str.includes('LOW')) return 1;
+                    if (str.includes('NORMAL')) return 2;
+                    if (str.includes('AT RISK') || str.includes('RISK')) return 3;
+                    if (str.includes('HIGH')) return 4;
+                    return 99;
+                };
+                return getIndex(a) - getIndex(b);
+            };
+            updateChart('chartBP', 'BLOOD_PRESSURE_CLASSIFICATION', 'bar', false, [], bpSort);
+
             updateChart('chartCholesterol', 'BLOOD_CHOLESTEROL_CLASSIFICATION', 'bar');
-            updateChart('chartNCD', 'NCD_RISK_CLASSIFICATION', 'bar');
+
+            // C9. Risiko NCD Sort Order: Healthy -> Healthy with Risk -> At Risk of NCD -> With NCD
+            const ncdSort = (a, b) => {
+                const getIndex = (s) => {
+                    const str = (s || '').toUpperCase();
+                    if (str === 'HEALTHY' || str === 'SIHAT') return 1;
+                    if (str.includes('WITH RISK')) return 2;
+                    if (str.includes('AT RISK OF NCD') || str.includes('AT RISK')) return 3;
+                    if (str.includes('WITH NCD')) return 4;
+                    return 99;
+                };
+                return getIndex(a) - getIndex(b);
+            };
+            updateChart('chartNCD', 'NCD_RISK_CLASSIFICATION', 'bar', false, [], ncdSort);
         }
 
-        // Agregasi manual khusus untuk carta pai pecahan jenis penyakit komorbiditi
         function renderComorbidityTypeChart() {
             const id = 'chartComorbidityTypes';
             const ctx = document.getElementById(id).getContext('2d');
@@ -815,6 +927,52 @@
                 }
             });
         }
+
+        // FUNGSI PEMBESARAN CARTA (MODAL OVERLAY)
+        function openChartModal(chartId, title) {
+            const origChart = charts[chartId];
+            if (!origChart) return;
+
+            document.getElementById('modalChartTitle').innerText = title;
+            const modalEl = document.getElementById('chartModal');
+            modalEl.classList.remove('hidden');
+
+            const ctx = document.getElementById('modalCanvas').getContext('2d');
+            if (modalChartInstance) modalChartInstance.destroy();
+
+            const origData = JSON.parse(JSON.stringify(origChart.config.data));
+            const origType = origChart.config.type;
+            const origOptions = JSON.parse(JSON.stringify(origChart.config.options));
+
+            if (origOptions.plugins && origOptions.plugins.datalabels) {
+                origOptions.plugins.datalabels.font.size = 12;
+            }
+            if (origOptions.plugins && origOptions.plugins.legend) {
+                origOptions.plugins.legend.labels.font.size = 12;
+            }
+
+            modalChartInstance = new Chart(ctx, {
+                type: origType,
+                data: origData,
+                options: {
+                    ...origOptions,
+                    maintainAspectRatio: false,
+                    responsive: true
+                }
+            });
+
+            lucide.createIcons();
+        }
+
+        function closeChartModal(e, force = false) {
+            if (!force && e && e.target !== document.getElementById('chartModal')) return;
+            document.getElementById('chartModal').classList.add('hidden');
+            if (modalChartInstance) {
+                modalChartInstance.destroy();
+                modalChartInstance = null;
+            }
+        }
+
         function showLoader() { document.getElementById('loadingOverlay').classList.remove('opacity-0', 'pointer-events-none'); }
         function hideLoader() { document.getElementById('loadingOverlay').classList.add('opacity-0', 'pointer-events-none'); }
     </script>

@@ -346,8 +346,9 @@
                             else if (fType.includes('DENTAL')) ptj = 'PKPD';
                             
                             // Pembersihan nama fasiliti & lokaliti daripada jarak berlebihan
-                            const facilityName = (r.FACILITY_NAME || "").trim().replace(/\s+/g, ' ');
-                            const localityName = (r.LOCALITY || "").trim().replace(/\s+/g, ' ');
+                           const facilityName = (r.FACILITY_NAME || "").trim().replace(/\s+/g, ' ').toUpperCase();
+                           const localityName = (r.LOCALITY || "").trim().replace(/\s+/g, ' ').toUpperCase();
+
 
                             // Padanan TEPAT dengan pengepala kolum Google Sheets
                             const hasDM = parseInt(r["Diabetes Mellitus (DM)"]) === 1;

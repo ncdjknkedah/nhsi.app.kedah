@@ -148,6 +148,7 @@
                         <option value="PKD">PKD (Klinik Kesihatan)</option>
                         <option value="Hospital">Hospital</option>
                         <option value="PKPD">Pergigian</option>
+                        <option value="OTHERS">Lain-lain</option>
                     </select>
                 </div>
                 <div class="space-y-2.5">
@@ -340,12 +341,31 @@
                     skipEmptyLines: true,
                     complete: results => {
                         rawData = results.data.map(r => {
-                            const fType = (r.FACILITY_TYPE || "").toUpperCase();
-                            let ptj = 'PKD';
-                            if (fType.includes('HOSPITAL')) ptj = 'Hospital';
-                            else if (fType.includes('DENTAL')) ptj = 'PKPD';
+                            const fType = (r.FACILITY_TYPE || "").trim().toUpperCase();
                             
-                            // Padanan TEPAT dengan pengepala kolum Google Sheets anda
+                            // Pengkelasan Kategori PTJ Mengikut FACILITY_TYPE secara Tepat
+                            let ptj = 'OTHERS';
+                            if (fType.includes('DENTAL')) {
+                                ptj = 'PKPD';
+                            } else if (fType.includes('HOSPITAL')) {
+                                ptj = 'Hospital';
+                            } else if (
+                                fType.includes('HEALTH CLINIC') || 
+                                fType.includes('DISTRICT HEALTH OFFICE') || 
+                                fType.includes('RURAL CLINIC') || 
+                                fType.includes('MATERNAL AND CHILD')
+                            ) {
+                                ptj = 'PKD';
+                            } else {
+                                ptj = 'OTHERS';
+                            }
+                            
+                            // Pembersihan & Keseragaman Huruf Besar bagi Nama Fasiliti, Lokaliti & Daerah
+                            const facilityName = (r.FACILITY_NAME || "").trim().replace(/\s+/g, ' ').toUpperCase();
+                            const localityName = (r.LOCALITY || "").trim().replace(/\s+/g, ' ').toUpperCase();
+                            const facilityDistrict = (r.FACILITY_DISTRICT || "").trim().replace(/\s+/g, ' ').toUpperCase();
+
+                            // Padanan TEPAT dengan pengepala kolum Google Sheets
                             const hasDM = parseInt(r["Diabetes Mellitus (DM)"]) === 1;
                             const hasHT = parseInt(r["Hypertension (HT)"]) === 1;
                             const hasHC = parseInt(r["Hypercholesterolemia (HC)"]) === 1;
@@ -370,8 +390,10 @@
 
                             return { 
                                 ...r, 
+                                FACILITY_NAME: facilityName,
+                                LOCALITY: localityName,
                                 PTJ_TYPE: ptj, 
-                                FACILITY_DISTRICT: (r.FACILITY_DISTRICT || "").trim(),
+                                FACILITY_DISTRICT: facilityDistrict,
                                 _IS_HEALTHY: isHealthy,
                                 _HAS_DM: hasDM,
                                 _HAS_HT: hasHT,
@@ -427,7 +449,7 @@
                                     };
                                 }
                             } else {
-                                let loc1 = (row[1] || "").trim().toUpperCase();
+                                let loc1 = (row[1] || "").trim().replace(/\s+/g, ' ').toUpperCase();
                                 let targetVal1Str = (row[3] || "").trim();
                                 if (loc1 && loc1 !== 'LOKALITI') {
                                     let targetVal1 = parseInt(targetVal1Str);
@@ -436,7 +458,7 @@
                                     }
                                 }
                                 
-                                let loc2 = (row[5] || "").trim().toUpperCase();
+                                let loc2 = (row[5] || "").trim().replace(/\s+/g, ' ').toUpperCase();
                                 let targetVal2Str = (row[7] || "").trim();
                                 if (loc2 && loc2 !== 'LOKALITI2' && loc2 !== 'LOKALITI') {
                                     let targetVal2 = parseInt(targetVal2Str);
@@ -469,23 +491,22 @@
 
         function handlePlatformChange() {
             const p = document.getElementById('filterPlatform').value;
-            const ptjCont = document.getElementById('ptjFilterContainer');
             const labelFac = document.getElementById('labelFacility');
             const labelA2 = document.getElementById('labelAnalisa2');
-            if (p === 'KOSPEN WOW') {
-                ptjCont.style.display = 'block';
-                labelFac.innerText = 'Nama Fasiliti';
-                labelA2.innerText = 'Analisa 2: Kategori PTJ';
-            } else if (p === 'KOSPEN Community') {
-                ptjCont.style.display = 'none';
+            
+            // Penapis Kategori PTJ sentiasa kekal kelihatan untuk semua platform
+            document.getElementById('ptjFilterContainer').style.display = 'block';
+
+            if (p === 'KOSPEN Community') {
                 labelFac.innerText = 'Nama Lokaliti';
                 labelA2.innerText = 'Analisa 2: Mengikut Lokaliti';
-            } else {
-                ptjCont.style.display = 'none';
+            } else if (p === 'KOSPEN WOW') {
                 labelFac.innerText = 'Nama Fasiliti';
-                labelA2.innerText = 'Analisa 2: Mengikut Fasiliti';
+                labelA2.innerText = 'Analisa 2: Kategori PTJ';
+            } else {
+                labelFac.innerText = 'Nama Fasiliti';
+                labelA2.innerText = 'Analisa 2: Mengikut Fasiliti / Kategori PTJ';
             }
-            document.getElementById('filterPTJ').value = 'ALL';
             updateFacilityDropdown();
             applyFilters();
         }
@@ -501,7 +522,8 @@
             let data = rawData;
             if (p !== 'ALL') data = data.filter(r => r.PLATFORM === p);
             if (d !== 'ALL') data = data.filter(r => r.FACILITY_DISTRICT === d);
-            if (p === 'KOSPEN WOW' && ptj !== 'ALL') data = data.filter(r => r.PTJ_TYPE === ptj);
+            if (ptj !== 'ALL') data = data.filter(r => r.PTJ_TYPE === ptj);
+
             let list = [];
             if (p === 'KOSPEN Community') list = [...new Set(data.map(r => r.LOCALITY))].filter(Boolean).sort();
             else list = [...new Set(data.map(r => r.FACILITY_NAME))].filter(Boolean).sort();
@@ -526,17 +548,21 @@
             const chkHC = document.getElementById('chkHC').checked;
             const chkOthers = document.getElementById('chkOthers').checked;
 
+            const allChecked = chkHealthy && chkDM && chkHT && chkHC && chkOthers;
+
             filteredData = rawData.filter(r => {
-                // 1. Demografik & Platform Filters
+                // 1. Demografik, Platform & Kategori PTJ Filters
                 if (p !== 'ALL' && r.PLATFORM !== p) return false;
                 if (d !== 'ALL' && r.FACILITY_DISTRICT !== d) return false;
-                if (p === 'KOSPEN WOW' && ptj !== 'ALL' && r.PTJ_TYPE !== ptj) return false;
+                if (ptj !== 'ALL' && r.PTJ_TYPE !== ptj) return false; // Penapis PTJ berfungsi untuk semua pilihan platform
                 if (fac !== 'ALL') {
                     if (p === 'KOSPEN Community' && r.LOCALITY !== fac) return false;
                     if (p !== 'KOSPEN Community' && r.FACILITY_NAME !== fac) return false;
                 }
 
                 // 2. Checklist Komorbiditi (OR Match Logic)
+                if (allChecked) return true;
+
                 let matchComorbidity = false;
                 if (chkHealthy && r._IS_HEALTHY) matchComorbidity = true;
                 if (chkDM && r._HAS_DM) matchComorbidity = true;
@@ -566,7 +592,10 @@
             if (fac === 'ALL') {
                 const getTargetForDistrict = (distName) => {
                     const t = targets[distName.toUpperCase()] || { PKD:0, Hospital:0, PKPD:0, MYVAS:0, KOSPEN:0 };
-                    if (p === 'ALL') return (t.PKD + t.Hospital + t.PKPD + t.MYVAS + t.KOSPEN);
+                    if (p === 'ALL') {
+                        if (ptj === 'ALL') return (t.PKD + t.Hospital + t.PKPD + t.MYVAS + t.KOSPEN);
+                        return (t[ptj] || 0);
+                    }
                     if (p === 'MyVAS') return t.MYVAS;
                     if (p === 'KOSPEN Community') return t.KOSPEN;
                     if (p === 'KOSPEN WOW') return (ptj === 'ALL' ? (t.PKD + t.Hospital + t.PKPD) : (t[ptj] || 0));
@@ -619,10 +648,14 @@
                 const actual = counts[d];
                 const t = targets[d.toUpperCase()] || { PKD:0, Hospital:0, PKPD:0, MYVAS:0, KOSPEN:0 };
                 let target = 0;
-                if (p === 'ALL') target = (t.PKD + t.Hospital + t.PKPD + t.MYVAS + t.KOSPEN);
+                if (p === 'ALL') {
+                    if (ptj === 'ALL') target = (t.PKD + t.Hospital + t.PKPD + t.MYVAS + t.KOSPEN);
+                    else target = (t[ptj] || 0);
+                }
                 else if (p === 'MyVAS') target = t.MYVAS;
                 else if (p === 'KOSPEN Community') target = t.KOSPEN;
                 else if (p === 'KOSPEN WOW') target = (ptj === 'ALL' ? (t.PKD + t.Hospital + t.PKPD) : (t[ptj] || 0));
+                
                 const rate = target > 0 ? (actual / target * 100) : null;
                 const color = rate >= 100 ? 'bg-emerald-500' : (rate >= 80 ? 'bg-blue-500' : 'bg-amber-500');
                 const row = document.createElement('div');
@@ -636,8 +669,16 @@
             const container = document.getElementById('ptjCategoryPerformance');
             container.innerHTML = '';
             const p = document.getElementById('filterPlatform').value;
-            if (p === 'KOSPEN WOW') {
-                const cats = [{ id: 'PKD', label: 'PKD', color: 'bg-emerald-500' }, { id: 'Hospital', label: 'Hospital', color: 'bg-blue-500' }, { id: 'PKPD', label: 'Pergigian', color: 'bg-rose-500' }];
+            const ptj = document.getElementById('filterPTJ').value;
+
+            // Jika KOSPEN WOW & PTJ = ALL dipilih, paparkan ringkasan mengikut 4 kategori PTJ
+            if (p === 'KOSPEN WOW' && ptj === 'ALL') {
+                const cats = [
+                    { id: 'PKD', label: 'PKD (Klinik Kesihatan)', color: 'bg-emerald-500' },
+                    { id: 'Hospital', label: 'Hospital', color: 'bg-blue-500' },
+                    { id: 'PKPD', label: 'Pergigian', color: 'bg-rose-500' },
+                    { id: 'OTHERS', label: 'Lain-lain', color: 'bg-amber-500' }
+                ];
                 cats.forEach(cat => {
                     const actual = filteredData.filter(r => r.PTJ_TYPE === cat.id).length;
                     const row = document.createElement('div');
@@ -646,7 +687,7 @@
                     container.appendChild(row);
                 });
             } else {
-                const counts = {}; filteredData.forEach(r => { const key = (p === 'KOSPEN Community' ? r.LOCALITY : r.FACILITY_NAME) || 'Tiada Nama'; counts[key] = (counts[key] || 0) + 1; });
+                const counts = {}; filteredData.forEach(r => { const key = (p === 'KOSPEN Community' ? r.LOCALITY : r.FACILITY_NAME) || 'TIADA NAMA'; counts[key] = (counts[key] || 0) + 1; });
                 const list = Object.entries(counts).sort((a,b) => b[1] - a[1]).slice(0, 50);
                 list.forEach(([name, count]) => {
                     let targetInfo = '';

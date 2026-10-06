@@ -53,6 +53,22 @@
             <p class="text-slate-800 font-black text-lg md:text-xl tracking-tight text-center px-6 uppercase">Menyusun Analisa NHSI Kedah...</p>
         </div>
 
+        <!-- MODAL PEMBESARAN CARTA -->
+        <div id="chartModal" onclick="closeChartModal(event)" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[200] hidden flex flex-col items-center justify-center p-4 md:p-10 transition-all duration-300">
+            <div onclick="event.stopPropagation()" class="bg-white w-full max-w-5xl rounded-[2.5rem] p-6 md:p-10 relative shadow-2xl space-y-6 animate-fade-in">
+                <div class="flex justify-between items-center border-b border-slate-100 pb-4">
+                    <h3 id="modalChartTitle" class="text-xl md:text-2xl font-black text-slate-900 uppercase tracking-tight">Carta Membesar</h3>
+                    <button onclick="closeChartModal(null, true)" class="p-2.5 bg-slate-100 hover:bg-slate-200 rounded-2xl transition">
+                        <i data-lucide="x" class="w-6 h-6 text-slate-700"></i>
+                    </button>
+                </div>
+                <div class="w-full h-[500px] relative">
+                    <canvas id="modalCanvas"></canvas>
+                </div>
+                <p class="text-center text-[10px] text-slate-400 font-bold uppercase tracking-widest">Klik di luar kotak atau butang (X) untuk tutup</p>
+            </div>
+        </div>
+
         <header class="bg-gradient-to-br from-blue-950 via-blue-900 to-indigo-900 rounded-[2rem] md:rounded-[3rem] p-6 md:p-12 text-white shadow-2xl relative overflow-hidden">
             <div class="absolute top-0 right-0 opacity-10 pointer-events-none translate-x-1/4 -translate-y-1/4">
                 <i data-lucide="activity" class="w-[300px] h-[300px] md:w-[600px] md:h-[600px]"></i>
@@ -204,6 +220,7 @@
             </div>
         </div>
 
+        <!-- ANALISA 3: DAPATAN SARINGAN -->
         <div class="glass-card rounded-[3rem] p-8 md:p-14 border border-white/40 space-y-16 animate-fade-in shadow-2xl relative overflow-hidden bg-white/80">
             <div class="flex items-center gap-5 relative z-10">
                 <div class="p-4 bg-emerald-100 rounded-[2rem] shadow-inner">
@@ -220,15 +237,18 @@
                     <h4 class="text-2xl font-black text-slate-800 uppercase tracking-tighter">A. Sosiodemografi</h4>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
-                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm hover:shadow-md transition-all">
+                    <div ondblclick="openChartModal('chartGender', 'A1. Jantina')" class="cursor-pointer group relative bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm hover:shadow-md transition-all">
+                        <span class="absolute top-4 right-6 text-[9px] font-black uppercase tracking-wider text-blue-500 bg-blue-50 px-2.5 py-1 rounded-full opacity-0 group-hover:opacity-100 transition">Double-click untuk besarkan</span>
                         <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">A1. Jantina</h5>
                         <div class="chart-container"><canvas id="chartGender"></canvas></div>
                     </div>
-                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm hover:shadow-md transition-all">
+                    <div ondblclick="openChartModal('chartEthnicity', 'A2. Bangsa')" class="cursor-pointer group relative bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm hover:shadow-md transition-all">
+                        <span class="absolute top-4 right-6 text-[9px] font-black uppercase tracking-wider text-blue-500 bg-blue-50 px-2.5 py-1 rounded-full opacity-0 group-hover:opacity-100 transition">Double-click untuk besarkan</span>
                         <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">A2. Bangsa</h5>
                         <div class="chart-container"><canvas id="chartEthnicity"></canvas></div>
                     </div>
-                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm hover:shadow-md transition-all">
+                    <div ondblclick="openChartModal('chartAge', 'A3. Kumpulan Umur')" class="cursor-pointer group relative bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm hover:shadow-md transition-all">
+                        <span class="absolute top-4 right-6 text-[9px] font-black uppercase tracking-wider text-blue-500 bg-blue-50 px-2.5 py-1 rounded-full opacity-0 group-hover:opacity-100 transition">Double-click untuk besarkan</span>
                         <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">A3. Kumpulan Umur</h5>
                         <div class="chart-container"><canvas id="chartAge"></canvas></div>
                     </div>
@@ -240,11 +260,13 @@
                     <h4 class="text-2xl font-black text-slate-800 uppercase tracking-tighter">B. Status Kesihatan</h4>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
-                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                    <div ondblclick="openChartModal('chartComorbidityTypes', 'B1. Beban Penyakit Sedia Ada')" class="cursor-pointer group relative bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                        <span class="absolute top-4 right-6 text-[9px] font-black uppercase tracking-wider text-blue-500 bg-blue-50 px-2.5 py-1 rounded-full opacity-0 group-hover:opacity-100 transition">Double-click untuk besarkan</span>
                         <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">B1. Beban Penyakit Sedia Ada</h5>
                         <div class="chart-container"><canvas id="chartComorbidityTypes"></canvas></div>
                     </div>
-                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                    <div ondblclick="openChartModal('chartComorbidityCounts', 'B2. Bilangan Komorbiditi')" class="cursor-pointer group relative bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                        <span class="absolute top-4 right-6 text-[9px] font-black uppercase tracking-wider text-blue-500 bg-blue-50 px-2.5 py-1 rounded-full opacity-0 group-hover:opacity-100 transition">Double-click untuk besarkan</span>
                         <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">B2. Bilangan Komorbiditi</h5>
                         <div class="chart-container"><canvas id="chartComorbidityCounts"></canvas></div>
                     </div>
@@ -256,39 +278,48 @@
                     <h4 class="text-2xl font-black text-slate-800 uppercase tracking-tighter">C. Faktor Risiko dan Penyakit</h4>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
-                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                    <div ondblclick="openChartModal('chartDepression', 'C1. Status Depresi')" class="cursor-pointer group relative bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                        <span class="absolute top-4 right-6 text-[9px] font-black uppercase tracking-wider text-blue-500 bg-blue-50 px-2.5 py-1 rounded-full opacity-0 group-hover:opacity-100 transition">Double-click untuk besarkan</span>
                         <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">C1. Status Depresi</h5>
                         <div class="chart-container"><canvas id="chartDepression"></canvas></div>
                     </div>
-                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                    <div ondblclick="openChartModal('chartAnxiety', 'C2. Status Anxierti')" class="cursor-pointer group relative bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                        <span class="absolute top-4 right-6 text-[9px] font-black uppercase tracking-wider text-blue-500 bg-blue-50 px-2.5 py-1 rounded-full opacity-0 group-hover:opacity-100 transition">Double-click untuk besarkan</span>
                         <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">C2. Status Anxierti</h5>
                         <div class="chart-container"><canvas id="chartAnxiety"></canvas></div>
                     </div>
-                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                    <div ondblclick="openChartModal('chartSmoking', 'C3. Status Merokok')" class="cursor-pointer group relative bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                        <span class="absolute top-4 right-6 text-[9px] font-black uppercase tracking-wider text-blue-500 bg-blue-50 px-2.5 py-1 rounded-full opacity-0 group-hover:opacity-100 transition">Double-click untuk besarkan</span>
                         <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">C3. Status Merokok</h5>
                         <div class="chart-container"><canvas id="chartSmoking"></canvas></div>
                     </div>
-                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                    <div ondblclick="openChartModal('chartAlcohol', 'C4. Penggunaan Alkohol')" class="cursor-pointer group relative bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                        <span class="absolute top-4 right-6 text-[9px] font-black uppercase tracking-wider text-blue-500 bg-blue-50 px-2.5 py-1 rounded-full opacity-0 group-hover:opacity-100 transition">Double-click untuk besarkan</span>
                         <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">C4. Penggunaan Alkohol</h5>
                         <div class="chart-container"><canvas id="chartAlcohol"></canvas></div>
                     </div>
-                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                    <div ondblclick="openChartModal('chartBMI', 'C5. Status BMI')" class="cursor-pointer group relative bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                        <span class="absolute top-4 right-6 text-[9px] font-black uppercase tracking-wider text-blue-500 bg-blue-50 px-2.5 py-1 rounded-full opacity-0 group-hover:opacity-100 transition">Double-click untuk besarkan</span>
                         <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">C5. Status BMI</h5>
                         <div class="chart-container"><canvas id="chartBMI"></canvas></div>
                     </div>
-                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                    <div ondblclick="openChartModal('chartGlucose', 'C6. Gula Dalam Darah')" class="cursor-pointer group relative bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                        <span class="absolute top-4 right-6 text-[9px] font-black uppercase tracking-wider text-blue-500 bg-blue-50 px-2.5 py-1 rounded-full opacity-0 group-hover:opacity-100 transition">Double-click untuk besarkan</span>
                         <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">C6. Gula Dalam Darah</h5>
                         <div class="chart-container"><canvas id="chartGlucose"></canvas></div>
                     </div>
-                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                    <div ondblclick="openChartModal('chartBP', 'C7. Tekanan Darah')" class="cursor-pointer group relative bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                        <span class="absolute top-4 right-6 text-[9px] font-black uppercase tracking-wider text-blue-500 bg-blue-50 px-2.5 py-1 rounded-full opacity-0 group-hover:opacity-100 transition">Double-click untuk besarkan</span>
                         <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">C7. Tekanan Darah</h5>
                         <div class="chart-container"><canvas id="chartBP"></canvas></div>
                     </div>
-                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                    <div ondblclick="openChartModal('chartCholesterol', 'C8. Status Kolesterol')" class="cursor-pointer group relative bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                        <span class="absolute top-4 right-6 text-[9px] font-black uppercase tracking-wider text-blue-500 bg-blue-50 px-2.5 py-1 rounded-full opacity-0 group-hover:opacity-100 transition">Double-click untuk besarkan</span>
                         <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">C8. Status Kolesterol</h5>
                         <div class="chart-container"><canvas id="chartCholesterol"></canvas></div>
                     </div>
-                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm lg:col-span-1">
+                    <div ondblclick="openChartModal('chartNCD', 'C9. Risiko NCD')" class="cursor-pointer group relative bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm lg:col-span-1">
+                        <span class="absolute top-4 right-6 text-[9px] font-black uppercase tracking-wider text-blue-500 bg-blue-50 px-2.5 py-1 rounded-full opacity-0 group-hover:opacity-100 transition">Double-click untuk besarkan</span>
                         <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">C9. Risiko NCD</h5>
                         <div class="chart-container"><canvas id="chartNCD"></canvas></div>
                     </div>
@@ -314,6 +345,7 @@
         let targets = {}; 
         let localityTargets = {};
         let charts = {};
+        let modalChartInstance = null;
 
         window.onload = async () => {
             lucide.createIcons();
@@ -343,7 +375,6 @@
                         rawData = results.data.map(r => {
                             const fType = (r.FACILITY_TYPE || "").trim().toUpperCase();
                             
-                            // Pengkelasan Kategori PTJ Mengikut FACILITY_TYPE secara Tepat
                             let ptj = 'OTHERS';
                             if (fType.includes('DENTAL')) {
                                 ptj = 'PKPD';
@@ -360,12 +391,10 @@
                                 ptj = 'OTHERS';
                             }
                             
-                            // Pembersihan & Keseragaman Huruf Besar bagi Nama Fasiliti, Lokaliti & Daerah
                             const facilityName = (r.FACILITY_NAME || "").trim().replace(/\s+/g, ' ').toUpperCase();
                             const localityName = (r.LOCALITY || "").trim().replace(/\s+/g, ' ').toUpperCase();
                             const facilityDistrict = (r.FACILITY_DISTRICT || "").trim().replace(/\s+/g, ' ').toUpperCase();
 
-                            // Padanan TEPAT dengan pengepala kolum Google Sheets
                             const hasDM = parseInt(r["Diabetes Mellitus (DM)"]) === 1;
                             const hasHT = parseInt(r["Hypertension (HT)"]) === 1;
                             const hasHC = parseInt(r["Hypercholesterolemia (HC)"]) === 1;
@@ -373,10 +402,8 @@
                             const hasOthers = parseInt(r["Others (Termasuk Stroke, Coronary Heart Disease, dll.)"]) === 1;
                             const isHealthy = parseInt(r["Sihat Sepenuhnya (Healthy)"]) === 1;
 
-                            // Membaca lajur "Jumlah Penyakit" secara dinamik
                             const diseaseCount = parseInt(r["Jumlah Penyakit"]) || 0;
 
-                            // Klasifikasi Kategori Bilangan Komorbiditi (Untuk Carta B2)
                             let comorbidityCat = 'Sihat Sepenuhnya';
                             if (isHealthy) {
                                 comorbidityCat = 'Sihat Sepenuhnya';
@@ -575,12 +602,11 @@
             renderAnalisaCharts();
         }
 
-        // Pengiraan Sasaran Bagi Semua Platform & Penapis Kategori PTJ
         function calculateTargetForDistrict(distName, p, ptj) {
             const t = targets[distName.toUpperCase()] || { PKD:0, Hospital:0, PKPD:0, MYVAS:0, KOSPEN:0 };
             if (p === 'ALL') {
                 if (ptj === 'ALL') return (t.PKD + t.Hospital + t.PKPD + t.MYVAS + t.KOSPEN);
-                if (ptj === 'PKD') return (t.PKD + t.KOSPEN + t.MYVAS); // Target PKD = TARGET_PKD + TARGET_KOSPEN + TARGET_MYVAS
+                if (ptj === 'PKD') return (t.PKD + t.KOSPEN + t.MYVAS);
                 return (t[ptj] || 0);
             }
             if (p === 'MyVAS') return t.MYVAS;
@@ -683,7 +709,6 @@
                     counts[key] = (counts[key] || 0) + 1; 
                 });
 
-                // Susunan: Pejabat Kesihatan Daerah di PALING ATAS, diikuti oleh fasiliti lain mengikut bilangan saringan tertinggi
                 const list = Object.entries(counts).sort((a, b) => {
                     const nameA = a[0].toUpperCase();
                     const nameB = b[0].toUpperCase();
@@ -733,19 +758,70 @@
                 return (order[a] || 9) - (order[b] || 9);
             });
 
-            // SECTION C
+            // SECTION C: FAKTOR RISIKO DAN PENYAKIT WITH CUSTOM SORTING
             updateChart('chartDepression', 'MENTAL_HEALTH_DEPRESSION', 'pie');
             updateChart('chartAnxiety', 'MENTAL_HEALTH_ANXIETY', 'pie');
             updateChart('chartSmoking', 'SMOKING', 'pie', false, ['SMOKING', 'SMOKER']);
             updateChart('chartAlcohol', 'ALCOHOL_AUDIT', 'pie');
-            updateChart('chartBMI', 'BMI_CLASSIFICATION', 'bar');
-            updateChart('chartGlucose', 'BLOOD_GLUCOSE_CLASSIFICATION', 'bar');
-            updateChart('chartBP', 'BLOOD_PRESSURE_CLASSIFICATION', 'bar');
+
+            // C5. Status BMI Sort Order: Underweight -> Normal Weight -> Overweight -> Obese-I -> Obese-II -> Obese-III
+            const bmiSort = (a, b) => {
+                const order = ['UNDERWEIGHT', 'NORMAL', 'OVERWEIGHT', 'OBESE-I', 'OBESE-II', 'OBESE-III', 'OBESE CLASS I', 'OBESE CLASS II', 'OBESE CLASS III'];
+                const getIndex = (s) => {
+                    const str = (s || '').toUpperCase();
+                    for (let i = 0; i < order.length; i++) {
+                        if (str.includes(order[i])) return i;
+                    }
+                    return 99;
+                };
+                return getIndex(a) - getIndex(b);
+            };
+            updateChart('chartBMI', 'BMI_CLASSIFICATION', 'bar', false, [], bmiSort);
+
+            // C6. Gula Dalam Darah Sort Order: Low Blood Glucose -> Normal Blood Glucose -> High Blood Glucose
+            const glucoseSort = (a, b) => {
+                const getIndex = (s) => {
+                    const str = (s || '').toUpperCase();
+                    if (str.includes('LOW')) return 1;
+                    if (str.includes('NORMAL')) return 2;
+                    if (str.includes('HIGH')) return 3;
+                    return 99;
+                };
+                return getIndex(a) - getIndex(b);
+            };
+            updateChart('chartGlucose', 'BLOOD_GLUCOSE_CLASSIFICATION', 'bar', false, [], glucoseSort);
+
+            // C7. Tekanan Darah Sort Order: Low Blood Pressure -> Normal Blood Pressure -> At Risk -> High Blood Pressure
+            const bpSort = (a, b) => {
+                const getIndex = (s) => {
+                    const str = (s || '').toUpperCase();
+                    if (str.includes('LOW')) return 1;
+                    if (str.includes('NORMAL')) return 2;
+                    if (str.includes('AT RISK') || str.includes('RISK')) return 3;
+                    if (str.includes('HIGH')) return 4;
+                    return 99;
+                };
+                return getIndex(a) - getIndex(b);
+            };
+            updateChart('chartBP', 'BLOOD_PRESSURE_CLASSIFICATION', 'bar', false, [], bpSort);
+
             updateChart('chartCholesterol', 'BLOOD_CHOLESTEROL_CLASSIFICATION', 'bar');
-            updateChart('chartNCD', 'NCD_RISK_CLASSIFICATION', 'bar');
+
+            // C9. Risiko NCD Sort Order: Healthy -> Healthy with Risk -> At Risk of NCD -> With NCD
+            const ncdSort = (a, b) => {
+                const getIndex = (s) => {
+                    const str = (s || '').toUpperCase();
+                    if (str === 'HEALTHY' || str === 'SIHAT') return 1;
+                    if (str.includes('WITH RISK')) return 2;
+                    if (str.includes('AT RISK OF NCD') || str.includes('AT RISK')) return 3;
+                    if (str.includes('WITH NCD')) return 4;
+                    return 99;
+                };
+                return getIndex(a) - getIndex(b);
+            };
+            updateChart('chartNCD', 'NCD_RISK_CLASSIFICATION', 'bar', false, [], ncdSort);
         }
 
-        // Agregasi manual khusus untuk carta pai pecahan jenis penyakit komorbiditi
         function renderComorbidityTypeChart() {
             const id = 'chartComorbidityTypes';
             const ctx = document.getElementById(id).getContext('2d');
@@ -851,6 +927,52 @@
                 }
             });
         }
+
+        // FUNGSI PEMBESARAN CARTA (MODAL OVERLAY)
+        function openChartModal(chartId, title) {
+            const origChart = charts[chartId];
+            if (!origChart) return;
+
+            document.getElementById('modalChartTitle').innerText = title;
+            const modalEl = document.getElementById('chartModal');
+            modalEl.classList.remove('hidden');
+
+            const ctx = document.getElementById('modalCanvas').getContext('2d');
+            if (modalChartInstance) modalChartInstance.destroy();
+
+            const origData = JSON.parse(JSON.stringify(origChart.config.data));
+            const origType = origChart.config.type;
+            const origOptions = JSON.parse(JSON.stringify(origChart.config.options));
+
+            if (origOptions.plugins && origOptions.plugins.datalabels) {
+                origOptions.plugins.datalabels.font.size = 12;
+            }
+            if (origOptions.plugins && origOptions.plugins.legend) {
+                origOptions.plugins.legend.labels.font.size = 12;
+            }
+
+            modalChartInstance = new Chart(ctx, {
+                type: origType,
+                data: origData,
+                options: {
+                    ...origOptions,
+                    maintainAspectRatio: false,
+                    responsive: true
+                }
+            });
+
+            lucide.createIcons();
+        }
+
+        function closeChartModal(e, force = false) {
+            if (!force && e && e.target !== document.getElementById('chartModal')) return;
+            document.getElementById('chartModal').classList.add('hidden');
+            if (modalChartInstance) {
+                modalChartInstance.destroy();
+                modalChartInstance = null;
+            }
+        }
+
         function showLoader() { document.getElementById('loadingOverlay').classList.remove('opacity-0', 'pointer-events-none'); }
         function hideLoader() { document.getElementById('loadingOverlay').classList.add('opacity-0', 'pointer-events-none'); }
     </script>

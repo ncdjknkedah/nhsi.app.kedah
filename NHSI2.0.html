@@ -4,15 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Integrated NHSI Analytics | JKN Kedah</title>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <!-- PapaParse for CSV -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-    <!-- Chart.js & Plugins -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
     <style>
@@ -41,7 +36,7 @@
         .chart-container {
             position: relative;
             margin: auto;
-            height: 380px; /* Lebihkan sikit untuk label condong */
+            height: 380px;
             width: 100%;
         }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
@@ -53,13 +48,11 @@
 
     <div id="app" class="p-3 md:p-8 max-w-7xl mx-auto space-y-6 md:space-y-10">
         
-        <!-- Loading Overlay -->
         <div id="loadingOverlay" class="fixed inset-0 bg-white/95 z-[100] flex flex-col items-center justify-center transition-all duration-500">
             <div class="loader ease-linear rounded-full border-4 border-slate-100 h-12 w-12 md:h-16 md:w-16 mb-6"></div>
             <p class="text-slate-800 font-black text-lg md:text-xl tracking-tight text-center px-6 uppercase">Menyusun Analisa NHSI Kedah...</p>
         </div>
 
-        <!-- Header -->
         <header class="bg-gradient-to-br from-blue-950 via-blue-900 to-indigo-900 rounded-[2rem] md:rounded-[3rem] p-6 md:p-12 text-white shadow-2xl relative overflow-hidden">
             <div class="absolute top-0 right-0 opacity-10 pointer-events-none translate-x-1/4 -translate-y-1/4">
                 <i data-lucide="activity" class="w-[300px] h-[300px] md:w-[600px] md:h-[600px]"></i>
@@ -82,7 +75,6 @@
                     </div>
                 </div>
 
-                <!-- Main KPIs -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mt-8 md:mt-14">
                     <div class="bg-white/10 rounded-3xl p-6 backdrop-blur-xl border border-white/10 transition-all hover:bg-white/15 cursor-default group shadow-lg">
                         <div class="flex items-center gap-3 mb-4">
@@ -125,14 +117,14 @@
             </div>
         </header>
 
-        <!-- Filters Section -->
-        <div class="bg-white rounded-[2rem] shadow-2xl shadow-slate-200/60 border border-slate-100 p-6 md:p-8 animate-fade-in relative z-40">
-            <div class="flex items-center gap-3 mb-8">
+        <div class="bg-white rounded-[2rem] shadow-2xl shadow-slate-200/60 border border-slate-100 p-6 md:p-8 animate-fade-in relative z-40 space-y-6">
+            <div class="flex items-center gap-3 mb-2">
                 <div class="p-2.5 bg-blue-50 rounded-xl">
                     <i data-lucide="filter" class="w-5 h-5 text-blue-600"></i>
                 </div>
                 <h3 class="font-black text-slate-800 text-sm md:text-lg uppercase tracking-tight">Kriteria Penapis Data</h3>
             </div>
+            
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
                 <div class="space-y-2.5">
                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Platform Utama</label>
@@ -156,6 +148,7 @@
                         <option value="PKD">PKD (Klinik Kesihatan)</option>
                         <option value="Hospital">Hospital</option>
                         <option value="PKPD">Pergigian</option>
+                        <option value="OTHERS">Lain-lain</option>
                     </select>
                 </div>
                 <div class="space-y-2.5">
@@ -165,9 +158,34 @@
                     </select>
                 </div>
             </div>
+
+            <div class="border-t border-slate-100 pt-4 space-y-2.5">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Status Komorbiditi (Pilihan Pelbagai)</label>
+                <div class="flex flex-wrap gap-3">
+                    <label class="inline-flex items-center gap-2 bg-slate-50 border-2 border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-slate-700 text-xs cursor-pointer hover:bg-slate-100 transition-all select-none">
+                        <input type="checkbox" id="chkHealthy" value="HEALTHY" checked onchange="applyFilters()" class="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500">
+                        Sihat Sepenuhnya
+                    </label>
+                    <label class="inline-flex items-center gap-2 bg-slate-50 border-2 border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-slate-700 text-xs cursor-pointer hover:bg-slate-100 transition-all select-none">
+                        <input type="checkbox" id="chkDM" value="DM" checked onchange="applyFilters()" class="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500">
+                        Diabetes Mellitus
+                    </label>
+                    <label class="inline-flex items-center gap-2 bg-slate-50 border-2 border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-slate-700 text-xs cursor-pointer hover:bg-slate-100 transition-all select-none">
+                        <input type="checkbox" id="chkHT" value="HT" checked onchange="applyFilters()" class="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500">
+                        Hypertension
+                    </label>
+                    <label class="inline-flex items-center gap-2 bg-slate-50 border-2 border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-slate-700 text-xs cursor-pointer hover:bg-slate-100 transition-all select-none">
+                        <input type="checkbox" id="chkHC" value="HC" checked onchange="applyFilters()" class="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500">
+                        Hypercholesterolemia
+                    </label>
+                    <label class="inline-flex items-center gap-2 bg-slate-50 border-2 border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-slate-700 text-xs cursor-pointer hover:bg-slate-100 transition-all select-none">
+                        <input type="checkbox" id="chkOthers" value="OTHERS" checked onchange="applyFilters()" class="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500">
+                        Others / Asthma
+                    </label>
+                </div>
+            </div>
         </div>
 
-        <!-- ANALISA 1 & 2 -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div class="glass-card rounded-[2.5rem] p-8 md:p-10 border border-white/40 space-y-8 animate-fade-in shadow-xl">
                 <div class="flex items-center gap-4">
@@ -186,7 +204,6 @@
             </div>
         </div>
 
-        <!-- ANALISA 3: DAPATAN SARINGAN -->
         <div class="glass-card rounded-[3rem] p-8 md:p-14 border border-white/40 space-y-16 animate-fade-in shadow-2xl relative overflow-hidden bg-white/80">
             <div class="flex items-center gap-5 relative z-10">
                 <div class="p-4 bg-emerald-100 rounded-[2rem] shadow-inner">
@@ -198,7 +215,6 @@
                 </div>
             </div>
 
-            <!-- SECTION A: SOSIODEMOGRAFI -->
             <div class="space-y-10">
                 <div class="flex items-center gap-4 border-l-8 border-blue-500 pl-6">
                     <h4 class="text-2xl font-black text-slate-800 uppercase tracking-tighter">A. Sosiodemografi</h4>
@@ -219,46 +235,61 @@
                 </div>
             </div>
 
-            <!-- SECTION B: FAKTOR RISIKO DAN PENYAKIT -->
+            <div class="space-y-10">
+                <div class="flex items-center gap-4 border-l-8 border-teal-500 pl-6">
+                    <h4 class="text-2xl font-black text-slate-800 uppercase tracking-tighter">B. Status Kesihatan</h4>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
+                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                        <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">B1. Beban Penyakit Sedia Ada</h5>
+                        <div class="chart-container"><canvas id="chartComorbidityTypes"></canvas></div>
+                    </div>
+                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
+                        <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">B2. Bilangan Komorbiditi</h5>
+                        <div class="chart-container"><canvas id="chartComorbidityCounts"></canvas></div>
+                    </div>
+                </div>
+            </div>
+
             <div class="space-y-10">
                 <div class="flex items-center gap-4 border-l-8 border-rose-500 pl-6">
-                    <h4 class="text-2xl font-black text-slate-800 uppercase tracking-tighter">B. Faktor Risiko dan Penyakit</h4>
+                    <h4 class="text-2xl font-black text-slate-800 uppercase tracking-tighter">C. Faktor Risiko dan Penyakit</h4>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
                     <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
-                        <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">B1. Status Depresi</h5>
+                        <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">C1. Status Depresi</h5>
                         <div class="chart-container"><canvas id="chartDepression"></canvas></div>
                     </div>
                     <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
-                        <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">B2. Status Anxierti</h5>
+                        <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">C2. Status Anxierti</h5>
                         <div class="chart-container"><canvas id="chartAnxiety"></canvas></div>
                     </div>
                     <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
-                        <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">B3. Status Merokok</h5>
+                        <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">C3. Status Merokok</h5>
                         <div class="chart-container"><canvas id="chartSmoking"></canvas></div>
                     </div>
                     <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
-                        <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">B4. Penggunaan Alkohol</h5>
+                        <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">C4. Penggunaan Alkohol</h5>
                         <div class="chart-container"><canvas id="chartAlcohol"></canvas></div>
                     </div>
                     <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
-                        <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">B5. Status BMI</h5>
+                        <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">C5. Status BMI</h5>
                         <div class="chart-container"><canvas id="chartBMI"></canvas></div>
                     </div>
                     <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
-                        <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">B6. Gula Dalam Darah</h5>
+                        <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">C6. Gula Dalam Darah</h5>
                         <div class="chart-container"><canvas id="chartGlucose"></canvas></div>
                     </div>
                     <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
-                        <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">B7. Tekanan Darah</h5>
+                        <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">C7. Tekanan Darah</h5>
                         <div class="chart-container"><canvas id="chartBP"></canvas></div>
                     </div>
                     <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm">
-                        <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">B8. Status Kolesterol</h5>
+                        <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">C8. Status Kolesterol</h5>
                         <div class="chart-container"><canvas id="chartCholesterol"></canvas></div>
                     </div>
                     <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-4 shadow-sm lg:col-span-1">
-                        <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">B9. Risiko NCD</h5>
+                        <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">C9. Risiko NCD</h5>
                         <div class="chart-container"><canvas id="chartNCD"></canvas></div>
                     </div>
                 </div>
@@ -310,11 +341,67 @@
                     skipEmptyLines: true,
                     complete: results => {
                         rawData = results.data.map(r => {
-                            const fType = (r.FACILITY_TYPE || "").toUpperCase();
-                            let ptj = 'PKD';
-                            if (fType.includes('HOSPITAL')) ptj = 'Hospital';
-                            else if (fType.includes('DENTAL')) ptj = 'PKPD';
-                            return { ...r, PTJ_TYPE: ptj, FACILITY_DISTRICT: (r.FACILITY_DISTRICT || "").trim() };
+                            const fType = (r.FACILITY_TYPE || "").trim().toUpperCase();
+                            
+                            // Pengkelasan Kategori PTJ Mengikut FACILITY_TYPE secara Tepat
+                            let ptj = 'OTHERS';
+                            if (fType.includes('DENTAL')) {
+                                ptj = 'PKPD';
+                            } else if (fType.includes('HOSPITAL')) {
+                                ptj = 'Hospital';
+                            } else if (
+                                fType.includes('HEALTH CLINIC') || 
+                                fType.includes('DISTRICT HEALTH OFFICE') || 
+                                fType.includes('RURAL CLINIC') || 
+                                fType.includes('MATERNAL AND CHILD')
+                            ) {
+                                ptj = 'PKD';
+                            } else {
+                                ptj = 'OTHERS';
+                            }
+                            
+                            // Pembersihan & Keseragaman Huruf Besar bagi Nama Fasiliti, Lokaliti & Daerah
+                            const facilityName = (r.FACILITY_NAME || "").trim().replace(/\s+/g, ' ').toUpperCase();
+                            const localityName = (r.LOCALITY || "").trim().replace(/\s+/g, ' ').toUpperCase();
+                            const facilityDistrict = (r.FACILITY_DISTRICT || "").trim().replace(/\s+/g, ' ').toUpperCase();
+
+                            // Padanan TEPAT dengan pengepala kolum Google Sheets
+                            const hasDM = parseInt(r["Diabetes Mellitus (DM)"]) === 1;
+                            const hasHT = parseInt(r["Hypertension (HT)"]) === 1;
+                            const hasHC = parseInt(r["Hypercholesterolemia (HC)"]) === 1;
+                            const hasAsthma = parseInt(r["Asthma/COPD"]) === 1;
+                            const hasOthers = parseInt(r["Others (Termasuk Stroke, Coronary Heart Disease, dll.)"]) === 1;
+                            const isHealthy = parseInt(r["Sihat Sepenuhnya (Healthy)"]) === 1;
+
+                            // Membaca lajur "Jumlah Penyakit" secara dinamik
+                            const diseaseCount = parseInt(r["Jumlah Penyakit"]) || 0;
+
+                            // Klasifikasi Kategori Bilangan Komorbiditi (Untuk Carta B2)
+                            let comorbidityCat = 'Sihat Sepenuhnya';
+                            if (isHealthy) {
+                                comorbidityCat = 'Sihat Sepenuhnya';
+                            } else if (diseaseCount === 1) {
+                                comorbidityCat = '1 Komorbiditi';
+                            } else if (diseaseCount === 2) {
+                                comorbidityCat = '2 Komorbiditi';
+                            } else if (diseaseCount > 2) {
+                                comorbidityCat = '>2 Komorbiditi';
+                            }
+
+                            return { 
+                                ...r, 
+                                FACILITY_NAME: facilityName,
+                                LOCALITY: localityName,
+                                PTJ_TYPE: ptj, 
+                                FACILITY_DISTRICT: facilityDistrict,
+                                _IS_HEALTHY: isHealthy,
+                                _HAS_DM: hasDM,
+                                _HAS_HT: hasHT,
+                                _HAS_HC: hasHC,
+                                _HAS_ASTHMA: hasAsthma,
+                                _HAS_OTHERS: hasOthers,
+                                _COMORBIDITY_COUNT_CAT: comorbidityCat
+                            };
                         });
                         const dates = results.data.map(r => r.SOURCEDATE).filter(Boolean);
                         if (dates.length > 0) {
@@ -345,7 +432,6 @@
                             const val0 = (row[0] || "").trim().toUpperCase();
                             const val1 = (row[1] || "").trim().toUpperCase();
                             
-                            // Check if entering the KOSPEN Community targets table
                             if (val0.includes("TARGETS KOSPEN") || (val0 === "DAERAH" && val1 === "LOKALITI")) {
                                 isLocalitySection = true;
                                 return;
@@ -363,9 +449,7 @@
                                     };
                                 }
                             } else {
-                                // Locality targets section
-                                // Map Column B (index 1) -> Column D (index 3)
-                                let loc1 = (row[1] || "").trim().toUpperCase();
+                                let loc1 = (row[1] || "").trim().replace(/\s+/g, ' ').toUpperCase();
                                 let targetVal1Str = (row[3] || "").trim();
                                 if (loc1 && loc1 !== 'LOKALITI') {
                                     let targetVal1 = parseInt(targetVal1Str);
@@ -374,8 +458,7 @@
                                     }
                                 }
                                 
-                                // Map Column F (index 5) -> Column H (index 7)
-                                let loc2 = (row[5] || "").trim().toUpperCase();
+                                let loc2 = (row[5] || "").trim().replace(/\s+/g, ' ').toUpperCase();
                                 let targetVal2Str = (row[7] || "").trim();
                                 if (loc2 && loc2 !== 'LOKALITI2' && loc2 !== 'LOKALITI') {
                                     let targetVal2 = parseInt(targetVal2Str);
@@ -408,23 +491,22 @@
 
         function handlePlatformChange() {
             const p = document.getElementById('filterPlatform').value;
-            const ptjCont = document.getElementById('ptjFilterContainer');
             const labelFac = document.getElementById('labelFacility');
             const labelA2 = document.getElementById('labelAnalisa2');
-            if (p === 'KOSPEN WOW') {
-                ptjCont.style.display = 'block';
-                labelFac.innerText = 'Nama Fasiliti';
-                labelA2.innerText = 'Analisa 2: Kategori PTJ';
-            } else if (p === 'KOSPEN Community') {
-                ptjCont.style.display = 'none';
+            
+            // Penapis Kategori PTJ sentiasa kekal kelihatan untuk semua platform
+            document.getElementById('ptjFilterContainer').style.display = 'block';
+
+            if (p === 'KOSPEN Community') {
                 labelFac.innerText = 'Nama Lokaliti';
                 labelA2.innerText = 'Analisa 2: Mengikut Lokaliti';
-            } else {
-                ptjCont.style.display = 'none';
+            } else if (p === 'KOSPEN WOW') {
                 labelFac.innerText = 'Nama Fasiliti';
-                labelA2.innerText = 'Analisa 2: Mengikut Fasiliti';
+                labelA2.innerText = 'Analisa 2: Kategori PTJ';
+            } else {
+                labelFac.innerText = 'Nama Fasiliti';
+                labelA2.innerText = 'Analisa 2: Mengikut Fasiliti / Kategori PTJ';
             }
-            document.getElementById('filterPTJ').value = 'ALL';
             updateFacilityDropdown();
             applyFilters();
         }
@@ -440,7 +522,8 @@
             let data = rawData;
             if (p !== 'ALL') data = data.filter(r => r.PLATFORM === p);
             if (d !== 'ALL') data = data.filter(r => r.FACILITY_DISTRICT === d);
-            if (p === 'KOSPEN WOW' && ptj !== 'ALL') data = data.filter(r => r.PTJ_TYPE === ptj);
+            if (ptj !== 'ALL') data = data.filter(r => r.PTJ_TYPE === ptj);
+
             let list = [];
             if (p === 'KOSPEN Community') list = [...new Set(data.map(r => r.LOCALITY))].filter(Boolean).sort();
             else list = [...new Set(data.map(r => r.FACILITY_NAME))].filter(Boolean).sort();
@@ -457,14 +540,39 @@
             const d = document.getElementById('filterDistrict').value;
             const ptj = document.getElementById('filterPTJ').value;
             const fac = document.getElementById('filterFacility').value;
-            filteredData = rawData;
-            if (p !== 'ALL') filteredData = filteredData.filter(r => r.PLATFORM === p);
-            if (d !== 'ALL') filteredData = filteredData.filter(r => r.FACILITY_DISTRICT === d);
-            if (p === 'KOSPEN WOW' && ptj !== 'ALL') filteredData = filteredData.filter(r => r.PTJ_TYPE === ptj);
-            if (fac !== 'ALL') {
-                if (p === 'KOSPEN Community') filteredData = filteredData.filter(r => r.LOCALITY === fac);
-                else filteredData = filteredData.filter(r => r.FACILITY_NAME === fac);
-            }
+            
+            // Mengambil status checklist komorbiditi
+            const chkHealthy = document.getElementById('chkHealthy').checked;
+            const chkDM = document.getElementById('chkDM').checked;
+            const chkHT = document.getElementById('chkHT').checked;
+            const chkHC = document.getElementById('chkHC').checked;
+            const chkOthers = document.getElementById('chkOthers').checked;
+
+            const allChecked = chkHealthy && chkDM && chkHT && chkHC && chkOthers;
+
+            filteredData = rawData.filter(r => {
+                // 1. Demografik, Platform & Kategori PTJ Filters
+                if (p !== 'ALL' && r.PLATFORM !== p) return false;
+                if (d !== 'ALL' && r.FACILITY_DISTRICT !== d) return false;
+                if (ptj !== 'ALL' && r.PTJ_TYPE !== ptj) return false; // Penapis PTJ berfungsi untuk semua pilihan platform
+                if (fac !== 'ALL') {
+                    if (p === 'KOSPEN Community' && r.LOCALITY !== fac) return false;
+                    if (p !== 'KOSPEN Community' && r.FACILITY_NAME !== fac) return false;
+                }
+
+                // 2. Checklist Komorbiditi (OR Match Logic)
+                if (allChecked) return true;
+
+                let matchComorbidity = false;
+                if (chkHealthy && r._IS_HEALTHY) matchComorbidity = true;
+                if (chkDM && r._HAS_DM) matchComorbidity = true;
+                if (chkHT && r._HAS_HT) matchComorbidity = true;
+                if (chkHC && r._HAS_HC) matchComorbidity = true;
+                if (chkOthers && (r._HAS_OTHERS || r._HAS_ASTHMA)) matchComorbidity = true;
+                
+                return matchComorbidity;
+            });
+
             updateKPIs();
             renderAnalisa1();
             renderAnalisa2();
@@ -484,7 +592,10 @@
             if (fac === 'ALL') {
                 const getTargetForDistrict = (distName) => {
                     const t = targets[distName.toUpperCase()] || { PKD:0, Hospital:0, PKPD:0, MYVAS:0, KOSPEN:0 };
-                    if (p === 'ALL') return (t.PKD + t.Hospital + t.PKPD + t.MYVAS + t.KOSPEN);
+                    if (p === 'ALL') {
+                        if (ptj === 'ALL') return (t.PKD + t.Hospital + t.PKPD + t.MYVAS + t.KOSPEN);
+                        return (t[ptj] || 0);
+                    }
                     if (p === 'MyVAS') return t.MYVAS;
                     if (p === 'KOSPEN Community') return t.KOSPEN;
                     if (p === 'KOSPEN WOW') return (ptj === 'ALL' ? (t.PKD + t.Hospital + t.PKPD) : (t[ptj] || 0));
@@ -537,10 +648,14 @@
                 const actual = counts[d];
                 const t = targets[d.toUpperCase()] || { PKD:0, Hospital:0, PKPD:0, MYVAS:0, KOSPEN:0 };
                 let target = 0;
-                if (p === 'ALL') target = (t.PKD + t.Hospital + t.PKPD + t.MYVAS + t.KOSPEN);
+                if (p === 'ALL') {
+                    if (ptj === 'ALL') target = (t.PKD + t.Hospital + t.PKPD + t.MYVAS + t.KOSPEN);
+                    else target = (t[ptj] || 0);
+                }
                 else if (p === 'MyVAS') target = t.MYVAS;
                 else if (p === 'KOSPEN Community') target = t.KOSPEN;
                 else if (p === 'KOSPEN WOW') target = (ptj === 'ALL' ? (t.PKD + t.Hospital + t.PKPD) : (t[ptj] || 0));
+                
                 const rate = target > 0 ? (actual / target * 100) : null;
                 const color = rate >= 100 ? 'bg-emerald-500' : (rate >= 80 ? 'bg-blue-500' : 'bg-amber-500');
                 const row = document.createElement('div');
@@ -554,8 +669,16 @@
             const container = document.getElementById('ptjCategoryPerformance');
             container.innerHTML = '';
             const p = document.getElementById('filterPlatform').value;
-            if (p === 'KOSPEN WOW') {
-                const cats = [{ id: 'PKD', label: 'PKD', color: 'bg-emerald-500' }, { id: 'Hospital', label: 'Hospital', color: 'bg-blue-500' }, { id: 'PKPD', label: 'Pergigian', color: 'bg-rose-500' }];
+            const ptj = document.getElementById('filterPTJ').value;
+
+            // Jika KOSPEN WOW & PTJ = ALL dipilih, paparkan ringkasan mengikut 4 kategori PTJ
+            if (p === 'KOSPEN WOW' && ptj === 'ALL') {
+                const cats = [
+                    { id: 'PKD', label: 'PKD (Klinik Kesihatan)', color: 'bg-emerald-500' },
+                    { id: 'Hospital', label: 'Hospital', color: 'bg-blue-500' },
+                    { id: 'PKPD', label: 'Pergigian', color: 'bg-rose-500' },
+                    { id: 'OTHERS', label: 'Lain-lain', color: 'bg-amber-500' }
+                ];
                 cats.forEach(cat => {
                     const actual = filteredData.filter(r => r.PTJ_TYPE === cat.id).length;
                     const row = document.createElement('div');
@@ -564,7 +687,7 @@
                     container.appendChild(row);
                 });
             } else {
-                const counts = {}; filteredData.forEach(r => { const key = (p === 'KOSPEN Community' ? r.LOCALITY : r.FACILITY_NAME) || 'Tiada Nama'; counts[key] = (counts[key] || 0) + 1; });
+                const counts = {}; filteredData.forEach(r => { const key = (p === 'KOSPEN Community' ? r.LOCALITY : r.FACILITY_NAME) || 'TIADA NAMA'; counts[key] = (counts[key] || 0) + 1; });
                 const list = Object.entries(counts).sort((a,b) => b[1] - a[1]).slice(0, 50);
                 list.forEach(([name, count]) => {
                     let targetInfo = '';
@@ -586,16 +709,24 @@
 
         function renderAnalisaCharts() {
             document.getElementById('findingTotal').innerText = filteredData.length.toLocaleString();
+            
+            // SECTION A
             updateChart('chartGender', 'GENDER', 'pie');
             updateChart('chartEthnicity', 'ETHNICITY', 'bar', true);
-            
-            // Kumpulan Umur dengan Isihan Khas
             const ageSort = (a, b) => {
                 const getNum = (s) => parseInt(s.match(/\d+/) || 0);
                 return getNum(a) - getNum(b);
             };
             updateChart('chartAge', 'AGE_GROUP', 'bar', false, [], ageSort);
 
+            // SECTION B: STATUS KESIHATAN
+            renderComorbidityTypeChart();
+            updateChart('chartComorbidityCounts', '_COMORBIDITY_COUNT_CAT', 'pie', false, [], (a,b) => {
+                const order = { 'Sihat Sepenuhnya': 1, '1 Komorbiditi': 2, '2 Komorbiditi': 3, '>2 Komorbiditi': 4 };
+                return (order[a] || 9) - (order[b] || 9);
+            });
+
+            // SECTION C
             updateChart('chartDepression', 'MENTAL_HEALTH_DEPRESSION', 'pie');
             updateChart('chartAnxiety', 'MENTAL_HEALTH_ANXIETY', 'pie');
             updateChart('chartSmoking', 'SMOKING', 'pie', false, ['SMOKING', 'SMOKER']);
@@ -605,6 +736,55 @@
             updateChart('chartBP', 'BLOOD_PRESSURE_CLASSIFICATION', 'bar');
             updateChart('chartCholesterol', 'BLOOD_CHOLESTEROL_CLASSIFICATION', 'bar');
             updateChart('chartNCD', 'NCD_RISK_CLASSIFICATION', 'bar');
+        }
+
+        // Agregasi manual khusus untuk carta pai pecahan jenis penyakit komorbiditi
+        function renderComorbidityTypeChart() {
+            const id = 'chartComorbidityTypes';
+            const ctx = document.getElementById(id).getContext('2d');
+            
+            let counts = { 'Sihat Sepenuhnya': 0, 'Diabetes Mellitus': 0, 'Hypertension': 0, 'Hypercholesterolemia': 0, 'Others / Asthma': 0 };
+            
+            filteredData.forEach(r => {
+                if (r._IS_HEALTHY) counts['Sihat Sepenuhnya']++;
+                if (r._HAS_DM) counts['Diabetes Mellitus']++;
+                if (r._HAS_HT) counts['Hypertension']++;
+                if (r._HAS_HC) counts['Hypercholesterolemia']++;
+                if (r._HAS_OTHERS || r._HAS_ASTHMA) counts['Others / Asthma']++;
+            });
+
+            const labels = Object.keys(counts);
+            const data = Object.values(counts);
+            const totalRecords = filteredData.length;
+
+            if (charts[id]) charts[id].destroy();
+            const colors = ['#10b981', '#2563eb', '#db2777', '#f59e0b', '#6366f1'];
+
+            charts[id] = new Chart(ctx, {
+                type: 'pie',
+                data: { labels: labels, datasets: [{ data: data, backgroundColor: colors, borderWidth: 0 }] },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { font: { size: 9, weight: 'bold' }, padding: 15 } },
+                        tooltip: { 
+                            callbacks: { 
+                                label: (c) => ` ${c.raw.toLocaleString()} kes (${totalRecords > 0 ? ((c.raw / totalRecords) * 100).toFixed(1) : 0}% daripada jumlah populasi)` 
+                            } 
+                        },
+                        datalabels: {
+                            display: (context) => context.dataset.data[context.dataIndex] > 0,
+                            formatter: (v) => `${v}\n(${(v / totalRecords * 100).toFixed(1)}%)`,
+                            color: '#fff',
+                            font: { weight: '900', size: 9 },
+                            textAlign: 'center',
+                            textStrokeColor: 'rgba(0,0,0,0.4)',
+                            textStrokeWidth: 2
+                        }
+                    },
+                    layout: { padding: { top: 10, right: 10, left: 10, bottom: 20 } }
+                }
+            });
         }
 
         function updateChart(id, col, type, horiz = false, fallbackCols = [], customSort = null) {

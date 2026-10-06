@@ -345,7 +345,11 @@
                             if (fType.includes('HOSPITAL')) ptj = 'Hospital';
                             else if (fType.includes('DENTAL')) ptj = 'PKPD';
                             
-                            // Padanan TEPAT dengan pengepala kolum Google Sheets anda
+                            // Pembersihan nama fasiliti & lokaliti daripada jarak berlebihan
+                            const facilityName = (r.FACILITY_NAME || "").trim().replace(/\s+/g, ' ');
+                            const localityName = (r.LOCALITY || "").trim().replace(/\s+/g, ' ');
+
+                            // Padanan TEPAT dengan pengepala kolum Google Sheets
                             const hasDM = parseInt(r["Diabetes Mellitus (DM)"]) === 1;
                             const hasHT = parseInt(r["Hypertension (HT)"]) === 1;
                             const hasHC = parseInt(r["Hypercholesterolemia (HC)"]) === 1;
@@ -370,6 +374,8 @@
 
                             return { 
                                 ...r, 
+                                FACILITY_NAME: facilityName,
+                                LOCALITY: localityName,
                                 PTJ_TYPE: ptj, 
                                 FACILITY_DISTRICT: (r.FACILITY_DISTRICT || "").trim(),
                                 _IS_HEALTHY: isHealthy,
@@ -427,7 +433,7 @@
                                     };
                                 }
                             } else {
-                                let loc1 = (row[1] || "").trim().toUpperCase();
+                                let loc1 = (row[1] || "").trim().replace(/\s+/g, ' ').toUpperCase();
                                 let targetVal1Str = (row[3] || "").trim();
                                 if (loc1 && loc1 !== 'LOKALITI') {
                                     let targetVal1 = parseInt(targetVal1Str);
@@ -436,7 +442,7 @@
                                     }
                                 }
                                 
-                                let loc2 = (row[5] || "").trim().toUpperCase();
+                                let loc2 = (row[5] || "").trim().replace(/\s+/g, ' ').toUpperCase();
                                 let targetVal2Str = (row[7] || "").trim();
                                 if (loc2 && loc2 !== 'LOKALITI2' && loc2 !== 'LOKALITI') {
                                     let targetVal2 = parseInt(targetVal2Str);
@@ -526,6 +532,8 @@
             const chkHC = document.getElementById('chkHC').checked;
             const chkOthers = document.getElementById('chkOthers').checked;
 
+            const allChecked = chkHealthy && chkDM && chkHT && chkHC && chkOthers;
+
             filteredData = rawData.filter(r => {
                 // 1. Demografik & Platform Filters
                 if (p !== 'ALL' && r.PLATFORM !== p) return false;
@@ -537,6 +545,9 @@
                 }
 
                 // 2. Checklist Komorbiditi (OR Match Logic)
+                // Jika kesemua 5 checkbox dicentang, sertakan juga rekod tanpa status komorbiditi
+                if (allChecked) return true;
+
                 let matchComorbidity = false;
                 if (chkHealthy && r._IS_HEALTHY) matchComorbidity = true;
                 if (chkDM && r._HAS_DM) matchComorbidity = true;

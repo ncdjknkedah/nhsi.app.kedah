@@ -4,17 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Integrated NHSI Analytics | JKN Kedah</title>
+    <!-- 1) Mula muat turun data SEGERA, selari dengan muatan pustaka lain -->
+    <script>
+        window.NHSI_SRC = 'https://docs.google.com/spreadsheets/d/1VIT_i4-iW6l9XAxt0tR9KiDRe-gib-G8aaeTy9wsSbc/export?format=csv&gid=';
+        window.NHSI_FETCH = Promise.all(['0', '430782422'].map(g =>
+            fetch(window.NHSI_SRC + g).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+        ));
+        window.NHSI_FETCH.catch(() => {});
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- 2) Pustaka versi tetap + defer (tidak menyekat paparan) -->
+    <script defer src="https://unpkg.com/lucide@0.460.0"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
         .glass-card {
             background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(16px);
             border: 1px solid rgba(255, 255, 255, 0.4);
             box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
         }
@@ -85,6 +97,7 @@
                             <div id="sourceDateLabel" class="text-[10px] font-bold text-blue-300 uppercase tracking-[0.2em] ml-1 opacity-70 italic">
                                 Memuatkan Data...
                             </div>
+                            <div id="syncStatus" class="text-[10px] font-bold uppercase tracking-[0.2em] ml-1"></div>
                         </div>
                         <h1 class="text-3xl md:text-6xl font-black mb-1 tracking-tighter leading-tight">Analisis NHSI Kedah</h1>
                         <p class="text-blue-100/70 text-sm md:text-xl font-medium max-w-2xl leading-relaxed uppercase tracking-wide">Pemantauan Prestasi Saringan NHSI 2026 JKN Kedah</p>
@@ -335,275 +348,304 @@
     </div>
 
     <script>
-        const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1VIT_i4-iW6l9XAxt0tR9KiDRe-gib-G8aaeTy9wsSbc/export?format=csv&gid=';
-        const GID_MAIN = '0';
-        const GID_TARGETS = '430782422';
-        
+        const CACHE_KEY = 'nhsi-kedah-v1';
+
         let rawData = [];
         let filteredData = [];
         let districts = [];
-        let targets = {}; 
+        let targets = {};
         let localityTargets = {};
         let charts = {};
+        let chartData = {};
         let modalChartInstance = null;
 
-        window.onload = async () => {
+        const COLORS = ['#2563eb', '#db2777', '#f59e0b', '#10b981', '#6366f1', '#f43f5e', '#8b5cf6', '#06b6d4', '#475569', '#14b8a6', '#f97316'];
+        const COLORS_COMORB = ['#10b981', '#2563eb', '#db2777', '#f59e0b', '#6366f1'];
+        const $ = id => document.getElementById(id);
+        const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+        const clean = s => (s || '').trim().replace(/\s+/g, ' ').toUpperCase();
+        const pct = (v, t) => t > 0 ? (v / t * 100).toFixed(1) : '0';
+
+        // ================= SUSUNAN KATEGORI =================
+        const idxSort = fn => (a, b) => fn(a) - fn(b);
+        const ageSort = idxSort(s => parseInt((s.match(/\d+/) || [0])[0]));
+        const ccSort = idxSort(s => ({ 'Sihat Sepenuhnya': 1, '1 Komorbiditi': 2, '2 Komorbiditi': 3, '>2 Komorbiditi': 4 }[s] || 9));
+        const bmiSort = idxSort(s => {
+            const order = ['UNDERWEIGHT', 'NORMAL', 'OVERWEIGHT', 'OBESE-I', 'OBESE-II', 'OBESE-III', 'OBESE CLASS I', 'OBESE CLASS II', 'OBESE CLASS III'];
+            const str = (s || '').toUpperCase();
+            for (let i = 0; i < order.length; i++) if (str.includes(order[i])) return i;
+            return 99;
+        });
+        const glucoseSort = idxSort(s => {
+            const str = (s || '').toUpperCase();
+            if (str.includes('LOW')) return 1; if (str.includes('NORMAL')) return 2; if (str.includes('HIGH')) return 3; return 99;
+        });
+        const bpSort = idxSort(s => {
+            const str = (s || '').toUpperCase();
+            if (str.includes('LOW')) return 1; if (str.includes('NORMAL')) return 2;
+            if (str.includes('AT RISK') || str.includes('RISK')) return 3; if (str.includes('HIGH')) return 4; return 99;
+        });
+        const ncdSort = idxSort(s => {
+            const str = (s || '').toUpperCase();
+            if (str === 'HEALTHY' || str === 'SIHAT') return 1; if (str.includes('WITH RISK')) return 2;
+            if (str.includes('AT RISK OF NCD') || str.includes('AT RISK')) return 3; if (str.includes('WITH NCD')) return 4; return 99;
+        });
+
+        // Definisi semua carta (satu sumber kebenaran)
+        const CHART_DEFS = [
+            { id: 'chartGender', col: 'GENDER', type: 'pie' },
+            { id: 'chartEthnicity', col: 'ETHNICITY', type: 'bar', horiz: true },
+            { id: 'chartAge', col: 'AGE_GROUP', type: 'bar', sort: ageSort },
+            { id: 'chartComorbidityTypes', type: 'pie', special: 'comorb' },
+            { id: 'chartComorbidityCounts', col: 'CC', type: 'pie', sort: ccSort },
+            { id: 'chartDepression', col: 'MENTAL_HEALTH_DEPRESSION', type: 'pie' },
+            { id: 'chartAnxiety', col: 'MENTAL_HEALTH_ANXIETY', type: 'pie' },
+            { id: 'chartSmoking', col: 'SMOKING', type: 'pie' },
+            { id: 'chartAlcohol', col: 'ALCOHOL_AUDIT', type: 'pie' },
+            { id: 'chartBMI', col: 'BMI_CLASSIFICATION', type: 'bar', sort: bmiSort },
+            { id: 'chartGlucose', col: 'BLOOD_GLUCOSE_CLASSIFICATION', type: 'bar', sort: glucoseSort },
+            { id: 'chartBP', col: 'BLOOD_PRESSURE_CLASSIFICATION', type: 'bar', sort: bpSort },
+            { id: 'chartCholesterol', col: 'BLOOD_CHOLESTEROL_CLASSIFICATION', type: 'bar' },
+            { id: 'chartNCD', col: 'NCD_RISK_CLASSIFICATION', type: 'bar', sort: ncdSort }
+        ];
+        const DEF_BY_ID = Object.fromEntries(CHART_DEFS.map(d => [d.id, d]));
+        const COUNT_DEFS = CHART_DEFS.filter(d => d.col);
+
+        // ================= CACHE (IndexedDB) =================
+        function openDB() {
+            return new Promise((res, rej) => {
+                const r = indexedDB.open('nhsi-dashboard', 1);
+                r.onupgradeneeded = () => r.result.createObjectStore('cache');
+                r.onsuccess = () => res(r.result);
+                r.onerror = () => rej(r.error);
+            });
+        }
+        async function cacheGet() {
+            try {
+                const db = await openDB();
+                return await new Promise(res => {
+                    const q = db.transaction('cache').objectStore('cache').get(CACHE_KEY);
+                    q.onsuccess = () => res(q.result || null);
+                    q.onerror = () => res(null);
+                });
+            } catch (e) { return null; }
+        }
+        async function cacheSet(v) {
+            try { const db = await openDB(); db.transaction('cache', 'readwrite').objectStore('cache').put(v, CACHE_KEY); } catch (e) { }
+        }
+        function hashStr(s) { // FNV-1a ringkas untuk kesan perubahan data
+            let h = 0x811c9dc5;
+            for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+            return (h >>> 0).toString(36) + ':' + s.length;
+        }
+
+        // ================= PARSING (simpan medan yang perlu sahaja) =================
+        function compactRow(r) {
+            const fType = (r.FACILITY_TYPE || '').trim().toUpperCase();
+            let ptj = 'OTHERS';
+            if (fType.includes('DENTAL')) ptj = 'PKPD';
+            else if (fType.includes('HOSPITAL')) ptj = 'Hospital';
+            else if (fType.includes('HEALTH CLINIC') || fType.includes('DISTRICT HEALTH OFFICE') || fType.includes('RURAL CLINIC') || fType.includes('MATERNAL AND CHILD')) ptj = 'PKD';
+
+            const isHealthy = parseInt(r['Sihat Sepenuhnya (Healthy)']) === 1;
+            const dc = parseInt(r['Jumlah Penyakit']) || 0;
+            let cc = 'Sihat Sepenuhnya';
+            if (!isHealthy) { if (dc === 1) cc = '1 Komorbiditi'; else if (dc === 2) cc = '2 Komorbiditi'; else if (dc > 2) cc = '>2 Komorbiditi'; }
+
+            return {
+                PLATFORM: r.PLATFORM,
+                PTJ_TYPE: ptj,
+                FACILITY_NAME: clean(r.FACILITY_NAME),
+                LOCALITY: clean(r.LOCALITY),
+                FACILITY_DISTRICT: clean(r.FACILITY_DISTRICT),
+                H: isHealthy,
+                DM: parseInt(r['Diabetes Mellitus (DM)']) === 1,
+                HT: parseInt(r['Hypertension (HT)']) === 1,
+                HC: parseInt(r['Hypercholesterolemia (HC)']) === 1,
+                OA: parseInt(r['Asthma/COPD']) === 1 || parseInt(r['Others (Termasuk Stroke, Coronary Heart Disease, dll.)']) === 1,
+                CC: cc,
+                GENDER: r.GENDER,
+                ETHNICITY: r.ETHNICITY,
+                AGE_GROUP: r.AGE_GROUP,
+                MENTAL_HEALTH_DEPRESSION: r.MENTAL_HEALTH_DEPRESSION,
+                MENTAL_HEALTH_ANXIETY: r.MENTAL_HEALTH_ANXIETY,
+                SMOKING: r.SMOKING || r.SMOKER,
+                ALCOHOL_AUDIT: r.ALCOHOL_AUDIT,
+                BMI_CLASSIFICATION: r.BMI_CLASSIFICATION,
+                BLOOD_GLUCOSE_CLASSIFICATION: r.BLOOD_GLUCOSE_CLASSIFICATION,
+                BLOOD_PRESSURE_CLASSIFICATION: r.BLOOD_PRESSURE_CLASSIFICATION,
+                BLOOD_CHOLESTEROL_CLASSIFICATION: r.BLOOD_CHOLESTEROL_CLASSIFICATION,
+                NCD_RISK_CLASSIFICATION: r.NCD_RISK_CLASSIFICATION
+            };
+        }
+
+        function parseMain(csv) {
+            return new Promise((resolve, reject) => {
+                const rows = []; let maxT = -Infinity;
+                Papa.parse(csv, {
+                    header: true, skipEmptyLines: true, worker: true, // parse di thread berasingan
+                    chunk: res => {
+                        const d = res.data;
+                        for (let i = 0; i < d.length; i++) {
+                            const r = d[i];
+                            rows.push(compactRow(r));
+                            if (r.SOURCEDATE) { const t = Date.parse(r.SOURCEDATE); if (t > maxT) maxT = t; }
+                        }
+                    },
+                    complete: () => resolve({ rows, maxT: isFinite(maxT) ? maxT : null }),
+                    error: reject
+                });
+            });
+        }
+
+        function parseTargets(csv) {
+            const t = {}, lt = {};
+            let isLoc = false;
+            Papa.parse(csv, { header: false, skipEmptyLines: true }).data.forEach(row => {
+                if (!row || row.length === 0) return;
+                const v0 = (row[0] || '').trim().toUpperCase();
+                const v1 = (row[1] || '').trim().toUpperCase();
+                if (v0.includes('TARGETS KOSPEN') || (v0 === 'DAERAH' && v1 === 'LOKALITI')) { isLoc = true; return; }
+                if (!isLoc) {
+                    if (v0 && v0 !== 'DAERAH' && v0 !== 'KEDAH') {
+                        t[v0] = { PKD: parseInt(row[1]) || 0, Hospital: parseInt(row[2]) || 0, PKPD: parseInt(row[3]) || 0, KOSPEN: parseInt(row[4]) || 0, MYVAS: parseInt(row[5]) || 0 };
+                    }
+                } else {
+                    const l1 = clean(row[1]);
+                    if (l1 && l1 !== 'LOKALITI') { const n = parseInt((row[3] || '').trim()); if (!isNaN(n)) lt[l1] = n; }
+                    const l2 = clean(row[5]);
+                    if (l2 && l2 !== 'LOKALITI2' && l2 !== 'LOKALITI') { const n = parseInt((row[7] || '').trim()); if (!isNaN(n)) lt[l2] = n; }
+                }
+            });
+            return { targets: t, localityTargets: lt };
+        }
+
+        // ================= BOOT =================
+        document.addEventListener('DOMContentLoaded', async () => {
             lucide.createIcons();
             Chart.register(ChartDataLabels);
             Chart.defaults.font.family = 'Inter';
             Chart.defaults.font.weight = '800';
-            await fetchAllData();
-            initDashboard();
-            hideLoader();
-        };
+            Chart.defaults.animation = false; // lukis terus tanpa animasi
+            setupLazyCharts();
 
-        async function fetchAllData() {
+            const cached = await cacheGet();
+            if (cached) {
+                applyData(cached);
+                hideLoader();
+                setSync('Memaparkan data simpanan — menyemak kemas kini…', 'text-amber-300');
+            }
+
             try {
-                const [dRes, tRes] = await Promise.all([fetch(SHEET_URL + GID_MAIN), fetch(SHEET_URL + GID_TARGETS)]);
-                const [dCsv, tCsv] = await Promise.all([dRes.text(), tRes.text()]);
-                await parseMainData(dCsv);
-                await parseTargetData(tCsv);
-            } catch (e) { console.error(e); alert('Ralat sambungan data.'); }
+                const [dCsv, tCsv] = await window.NHSI_FETCH;
+                const sig = hashStr(dCsv) + '|' + hashStr(tCsv);
+                if (!cached || cached.sig !== sig) {
+                    const main = await parseMain(dCsv);
+                    const tg = parseTargets(tCsv);
+                    const payload = { sig, rows: main.rows, maxT: main.maxT, targets: tg.targets, localityTargets: tg.localityTargets, savedAt: Date.now() };
+                    applyData(payload);
+                    cacheSet(payload);
+                    setSync(cached ? 'Data terkini telah dimuatkan' : '', 'text-emerald-300');
+                } else {
+                    setSync('Data adalah yang terkini', 'text-emerald-300');
+                }
+                setTimeout(() => setSync(''), 4000);
+            } catch (e) {
+                console.error(e);
+                if (!cached) alert('Ralat sambungan data.');
+                else setSync('Gagal menyemak kemas kini — memaparkan data simpanan', 'text-rose-300');
+            }
+            hideLoader();
+        });
+
+        function setSync(msg, cls = '') {
+            const el = $('syncStatus');
+            el.className = 'text-[10px] font-bold uppercase tracking-[0.2em] ml-1 ' + cls;
+            el.textContent = msg;
         }
 
-        function parseMainData(csv) {
-            return new Promise(resolve => {
-                Papa.parse(csv, {
-                    header: true,
-                    skipEmptyLines: true,
-                    complete: results => {
-                        rawData = results.data.map(r => {
-                            const fType = (r.FACILITY_TYPE || "").trim().toUpperCase();
-                            
-                            let ptj = 'OTHERS';
-                            if (fType.includes('DENTAL')) {
-                                ptj = 'PKPD';
-                            } else if (fType.includes('HOSPITAL')) {
-                                ptj = 'Hospital';
-                            } else if (
-                                fType.includes('HEALTH CLINIC') || 
-                                fType.includes('DISTRICT HEALTH OFFICE') || 
-                                fType.includes('RURAL CLINIC') || 
-                                fType.includes('MATERNAL AND CHILD')
-                            ) {
-                                ptj = 'PKD';
-                            } else {
-                                ptj = 'OTHERS';
-                            }
-                            
-                            const facilityName = (r.FACILITY_NAME || "").trim().replace(/\s+/g, ' ').toUpperCase();
-                            const localityName = (r.LOCALITY || "").trim().replace(/\s+/g, ' ').toUpperCase();
-                            const facilityDistrict = (r.FACILITY_DISTRICT || "").trim().replace(/\s+/g, ' ').toUpperCase();
-
-                            const hasDM = parseInt(r["Diabetes Mellitus (DM)"]) === 1;
-                            const hasHT = parseInt(r["Hypertension (HT)"]) === 1;
-                            const hasHC = parseInt(r["Hypercholesterolemia (HC)"]) === 1;
-                            const hasAsthma = parseInt(r["Asthma/COPD"]) === 1;
-                            const hasOthers = parseInt(r["Others (Termasuk Stroke, Coronary Heart Disease, dll.)"]) === 1;
-                            const isHealthy = parseInt(r["Sihat Sepenuhnya (Healthy)"]) === 1;
-
-                            const diseaseCount = parseInt(r["Jumlah Penyakit"]) || 0;
-
-                            let comorbidityCat = 'Sihat Sepenuhnya';
-                            if (isHealthy) {
-                                comorbidityCat = 'Sihat Sepenuhnya';
-                            } else if (diseaseCount === 1) {
-                                comorbidityCat = '1 Komorbiditi';
-                            } else if (diseaseCount === 2) {
-                                comorbidityCat = '2 Komorbiditi';
-                            } else if (diseaseCount > 2) {
-                                comorbidityCat = '>2 Komorbiditi';
-                            }
-
-                            return { 
-                                ...r, 
-                                FACILITY_NAME: facilityName,
-                                LOCALITY: localityName,
-                                PTJ_TYPE: ptj, 
-                                FACILITY_DISTRICT: facilityDistrict,
-                                _IS_HEALTHY: isHealthy,
-                                _HAS_DM: hasDM,
-                                _HAS_HT: hasHT,
-                                _HAS_HC: hasHC,
-                                _HAS_ASTHMA: hasAsthma,
-                                _HAS_OTHERS: hasOthers,
-                                _COMORBIDITY_COUNT_CAT: comorbidityCat
-                            };
-                        });
-                        const dates = results.data.map(r => r.SOURCEDATE).filter(Boolean);
-                        if (dates.length > 0) {
-                            const sorted = dates.sort((a, b) => new Date(b) - new Date(a));
-                            const lastDate = new Date(sorted[0]);
-                            document.getElementById('sourceDateLabel').innerText = `DATA DIKEMASKINI: ${lastDate.toLocaleDateString('ms-MY', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase()}`;
-                        }
-                        districts = [...new Set(rawData.map(r => r.FACILITY_DISTRICT))].filter(Boolean).sort();
-                        resolve();
-                    }
-                });
-            });
-        }
-
-        function parseTargetData(csv) {
-            return new Promise(resolve => {
-                Papa.parse(csv, {
-                    header: false,
-                    skipEmptyLines: true,
-                    complete: results => {
-                        targets = {};
-                        localityTargets = {};
-                        let isLocalitySection = false;
-                        
-                        results.data.forEach(row => {
-                            if (!row || row.length === 0) return;
-                            
-                            const val0 = (row[0] || "").trim().toUpperCase();
-                            const val1 = (row[1] || "").trim().toUpperCase();
-                            
-                            if (val0.includes("TARGETS KOSPEN") || (val0 === "DAERAH" && val1 === "LOKALITI")) {
-                                isLocalitySection = true;
-                                return;
-                            }
-                            
-                            if (!isLocalitySection) {
-                                let d = (row[0] || "").trim().toUpperCase();
-                                if (d && d !== 'DAERAH' && d !== 'KEDAH') {
-                                    targets[d] = {
-                                        PKD: parseInt(row[1]) || 0,
-                                        Hospital: parseInt(row[2]) || 0,
-                                        PKPD: parseInt(row[3]) || 0,
-                                        KOSPEN: parseInt(row[4]) || 0,
-                                        MYVAS: parseInt(row[5]) || 0
-                                    };
-                                }
-                            } else {
-                                let loc1 = (row[1] || "").trim().replace(/\s+/g, ' ').toUpperCase();
-                                let targetVal1Str = (row[3] || "").trim();
-                                if (loc1 && loc1 !== 'LOKALITI') {
-                                    let targetVal1 = parseInt(targetVal1Str);
-                                    if (!isNaN(targetVal1)) {
-                                        localityTargets[loc1] = targetVal1;
-                                    }
-                                }
-                                
-                                let loc2 = (row[5] || "").trim().replace(/\s+/g, ' ').toUpperCase();
-                                let targetVal2Str = (row[7] || "").trim();
-                                if (loc2 && loc2 !== 'LOKALITI2' && loc2 !== 'LOKALITI') {
-                                    let targetVal2 = parseInt(targetVal2Str);
-                                    if (!isNaN(targetVal2)) {
-                                        localityTargets[loc2] = targetVal2;
-                                    }
-                                }
-                            }
-                        });
-                        resolve();
-                    }
-                });
-            });
-        }
-
-        function initDashboard() {
+        function applyData(p) {
+            rawData = p.rows;
+            targets = p.targets || {};
+            localityTargets = p.localityTargets || {};
+            if (p.maxT) {
+                $('sourceDateLabel').innerText = `DATA DIKEMASKINI: ${new Date(p.maxT).toLocaleDateString('ms-MY', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase()}`;
+            }
+            districts = [...new Set(rawData.map(r => r.FACILITY_DISTRICT))].filter(Boolean).sort();
             populateDistrictDropdown();
             updateFacilityDropdown();
-            applyFilters();
+            runFilters();
         }
 
-        function populateDistrictDropdown() {
-            const select = document.getElementById('filterDistrict');
-            districts.forEach(d => {
-                const opt = document.createElement('option');
-                opt.value = d; opt.textContent = d;
-                select.appendChild(opt);
-            });
+        // ================= DROPDOWN =================
+        function fillSelect(select, allLabel, list) {
+            const prev = select.value;
+            select.innerHTML = `<option value="ALL">${allLabel}</option>` + list.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
+            select.value = list.includes(prev) ? prev : 'ALL';
         }
+
+        function populateDistrictDropdown() { fillSelect($('filterDistrict'), 'Semua Daerah', districts); }
 
         function handlePlatformChange() {
-            const p = document.getElementById('filterPlatform').value;
-            const labelFac = document.getElementById('labelFacility');
-            const labelA2 = document.getElementById('labelAnalisa2');
-            
-            document.getElementById('ptjFilterContainer').style.display = 'block';
-
+            const p = $('filterPlatform').value;
+            $('ptjFilterContainer').style.display = 'block';
             if (p === 'KOSPEN Community') {
-                labelFac.innerText = 'Nama Lokaliti';
-                labelA2.innerText = 'Analisa 2: Mengikut Lokaliti';
+                $('labelFacility').innerText = 'Nama Lokaliti';
+                $('labelAnalisa2').innerText = 'Analisa 2: Mengikut Lokaliti';
             } else if (p === 'KOSPEN WOW') {
-                labelFac.innerText = 'Nama Fasiliti';
-                labelA2.innerText = 'Analisa 2: Kategori PTJ';
+                $('labelFacility').innerText = 'Nama Fasiliti';
+                $('labelAnalisa2').innerText = 'Analisa 2: Kategori PTJ';
             } else {
-                labelFac.innerText = 'Nama Fasiliti';
-                labelA2.innerText = 'Analisa 2: Mengikut Fasiliti / Kategori PTJ';
+                $('labelFacility').innerText = 'Nama Fasiliti';
+                $('labelAnalisa2').innerText = 'Analisa 2: Mengikut Fasiliti / Kategori PTJ';
             }
             updateFacilityDropdown();
             applyFilters();
         }
-
         function handleDistrictChange() { updateFacilityDropdown(); applyFilters(); }
         function handlePTJChange() { updateFacilityDropdown(); applyFilters(); }
 
         function updateFacilityDropdown() {
-            const p = document.getElementById('filterPlatform').value;
-            const d = document.getElementById('filterDistrict').value;
-            const ptj = document.getElementById('filterPTJ').value;
-            const select = document.getElementById('filterFacility');
-            let data = rawData;
-            if (p !== 'ALL') data = data.filter(r => r.PLATFORM === p);
-            if (d !== 'ALL') data = data.filter(r => r.FACILITY_DISTRICT === d);
-            if (ptj !== 'ALL') data = data.filter(r => r.PTJ_TYPE === ptj);
-
-            let list = [];
-            if (p === 'KOSPEN Community') list = [...new Set(data.map(r => r.LOCALITY))].filter(Boolean).sort();
-            else list = [...new Set(data.map(r => r.FACILITY_NAME))].filter(Boolean).sort();
-            select.innerHTML = `<option value="ALL">Semua ${p === 'KOSPEN Community' ? 'Lokaliti' : 'Fasiliti'}</option>`;
-            list.forEach(item => {
-                const opt = document.createElement('option');
-                opt.value = item; opt.textContent = item;
-                select.appendChild(opt);
-            });
+            const p = $('filterPlatform').value, d = $('filterDistrict').value, ptj = $('filterPTJ').value;
+            const key = p === 'KOSPEN Community' ? 'LOCALITY' : 'FACILITY_NAME';
+            const set = new Set();
+            for (const r of rawData) {
+                if (p !== 'ALL' && r.PLATFORM !== p) continue;
+                if (d !== 'ALL' && r.FACILITY_DISTRICT !== d) continue;
+                if (ptj !== 'ALL' && r.PTJ_TYPE !== ptj) continue;
+                if (r[key]) set.add(r[key]);
+            }
+            fillSelect($('filterFacility'), `Semua ${p === 'KOSPEN Community' ? 'Lokaliti' : 'Fasiliti'}`, [...set].sort());
         }
 
-        function applyFilters() {
-            const p = document.getElementById('filterPlatform').value;
-            const d = document.getElementById('filterDistrict').value;
-            const ptj = document.getElementById('filterPTJ').value;
-            const fac = document.getElementById('filterFacility').value;
-            
-            const chkHealthy = document.getElementById('chkHealthy').checked;
-            const chkDM = document.getElementById('chkDM').checked;
-            const chkHT = document.getElementById('chkHT').checked;
-            const chkHC = document.getElementById('chkHC').checked;
-            const chkOthers = document.getElementById('chkOthers').checked;
+        // ================= PENAPIS =================
+        let filterTimer = null;
+        function applyFilters() { clearTimeout(filterTimer); filterTimer = setTimeout(runFilters, 60); }
 
-            const allChecked = chkHealthy && chkDM && chkHT && chkHC && chkOthers;
+        function runFilters() {
+            const p = $('filterPlatform').value, d = $('filterDistrict').value, ptj = $('filterPTJ').value, fac = $('filterFacility').value;
+            const cH = $('chkHealthy').checked, cDM = $('chkDM').checked, cHT = $('chkHT').checked, cHC = $('chkHC').checked, cO = $('chkOthers').checked;
+            const allChecked = cH && cDM && cHT && cHC && cO;
+            const facKey = p === 'KOSPEN Community' ? 'LOCALITY' : 'FACILITY_NAME';
 
             filteredData = rawData.filter(r => {
                 if (p !== 'ALL' && r.PLATFORM !== p) return false;
                 if (d !== 'ALL' && r.FACILITY_DISTRICT !== d) return false;
                 if (ptj !== 'ALL' && r.PTJ_TYPE !== ptj) return false;
-                if (fac !== 'ALL') {
-                    if (p === 'KOSPEN Community' && r.LOCALITY !== fac) return false;
-                    if (p !== 'KOSPEN Community' && r.FACILITY_NAME !== fac) return false;
-                }
-
+                if (fac !== 'ALL' && r[facKey] !== fac) return false;
                 if (allChecked) return true;
-
-                let matchComorbidity = false;
-                if (chkHealthy && r._IS_HEALTHY) matchComorbidity = true;
-                if (chkDM && r._HAS_DM) matchComorbidity = true;
-                if (chkHT && r._HAS_HT) matchComorbidity = true;
-                if (chkHC && r._HAS_HC) matchComorbidity = true;
-                if (chkOthers && (r._HAS_OTHERS || r._HAS_ASTHMA)) matchComorbidity = true;
-                
-                return matchComorbidity;
+                return (cH && r.H) || (cDM && r.DM) || (cHT && r.HT) || (cHC && r.HC) || (cO && r.OA);
             });
 
             updateKPIs();
             renderAnalisa1();
             renderAnalisa2();
-            renderAnalisaCharts();
+            computeChartData();
+            refreshCharts();
         }
 
         function calculateTargetForDistrict(distName, p, ptj) {
-            const t = targets[distName.toUpperCase()] || { PKD:0, Hospital:0, PKPD:0, MYVAS:0, KOSPEN:0 };
+            const t = targets[distName.toUpperCase()] || { PKD: 0, Hospital: 0, PKPD: 0, MYVAS: 0, KOSPEN: 0 };
             if (p === 'ALL') {
                 if (ptj === 'ALL') return (t.PKD + t.Hospital + t.PKPD + t.MYVAS + t.KOSPEN);
                 if (ptj === 'PKD') return (t.PKD + t.KOSPEN + t.MYVAS);
@@ -617,364 +659,224 @@
 
         function updateKPIs() {
             const actual = filteredData.length;
-            let target = 0;
-            const p = document.getElementById('filterPlatform').value;
-            const d = document.getElementById('filterDistrict').value;
-            const ptj = document.getElementById('filterPTJ').value;
-            const fac = document.getElementById('filterFacility').value;
-            
-            let showTarget = true;
-            
+            const p = $('filterPlatform').value, d = $('filterDistrict').value, ptj = $('filterPTJ').value, fac = $('filterFacility').value;
+            let target = 0, showTarget = true;
+
             if (fac === 'ALL') {
                 if (d === 'ALL') districts.forEach(dn => target += calculateTargetForDistrict(dn, p, ptj));
                 else target = calculateTargetForDistrict(d, p, ptj);
-            } else {
-                if (p === 'KOSPEN Community') {
-                    const normalizedFac = fac.toUpperCase().trim();
-                    if (localityTargets[normalizedFac] !== undefined && localityTargets[normalizedFac] > 0) {
-                        target = localityTargets[normalizedFac];
-                    } else {
-                        showTarget = false;
-                    }
-                } else {
-                    showTarget = false;
-                }
-            }
-            
-            document.getElementById('statActual').innerText = actual.toLocaleString();
-            
+            } else if (p === 'KOSPEN Community') {
+                const lt = localityTargets[fac.toUpperCase().trim()];
+                if (lt !== undefined && lt > 0) target = lt; else showTarget = false;
+            } else showTarget = false;
+
+            $('statActual').innerText = actual.toLocaleString();
             if (!showTarget) {
-                document.getElementById('statTarget').innerText = '-';
-                document.getElementById('statRate').innerText = '0%';
-                document.getElementById('statRateBar').style.width = '0%';
-                document.getElementById('statTargetSub').innerText = p === 'KOSPEN Community' ? 'LOKALITI TIADA SASARAN' : 'LOKALITI/FASILITI DIPILIH';
+                $('statTarget').innerText = '-';
+                $('statRate').innerText = '0%';
+                $('statRateBar').style.width = '0%';
+                $('statTargetSub').innerText = p === 'KOSPEN Community' ? 'LOKALITI TIADA SASARAN' : 'LOKALITI/FASILITI DIPILIH';
             } else {
-                document.getElementById('statTarget').innerText = target.toLocaleString();
-                document.getElementById('statTargetSub').innerText = fac === 'ALL' ? 'Sasaran Mengikut Kriteria' : 'Sasaran Lokaliti';
-                if (target > 0) {
-                    const rate = (actual / target * 100);
-                    document.getElementById('statRate').innerText = rate.toFixed(1) + '%';
-                    document.getElementById('statRateBar').style.width = Math.min(rate, 100) + '%';
-                } else {
-                    document.getElementById('statRate').innerText = '0%';
-                    document.getElementById('statRateBar').style.width = '0%';
-                }
+                $('statTarget').innerText = target.toLocaleString();
+                $('statTargetSub').innerText = fac === 'ALL' ? 'Sasaran Mengikut Kriteria' : 'Sasaran Lokaliti';
+                const rate = target > 0 ? actual / target * 100 : 0;
+                $('statRate').innerText = target > 0 ? rate.toFixed(1) + '%' : '0%';
+                $('statRateBar').style.width = Math.min(rate, 100) + '%';
             }
         }
 
         function renderAnalisa1() {
-            const container = document.getElementById('districtPerformance');
-            container.innerHTML = '';
-            const p = document.getElementById('filterPlatform').value;
-            const ptj = document.getElementById('filterPTJ').value;
-            const counts = {}; filteredData.forEach(r => counts[r.FACILITY_DISTRICT] = (counts[r.FACILITY_DISTRICT] || 0) + 1);
-            const curDistricts = Object.keys(counts).sort();
-            curDistricts.forEach(d => {
+            const p = $('filterPlatform').value, ptj = $('filterPTJ').value;
+            const counts = {};
+            for (const r of filteredData) counts[r.FACILITY_DISTRICT] = (counts[r.FACILITY_DISTRICT] || 0) + 1;
+            $('districtPerformance').innerHTML = Object.keys(counts).sort().map(d => {
                 const actual = counts[d];
                 const target = calculateTargetForDistrict(d, p, ptj);
-                
                 const rate = target > 0 ? (actual / target * 100) : null;
                 const color = rate >= 100 ? 'bg-emerald-500' : (rate >= 80 ? 'bg-blue-500' : 'bg-amber-500');
-                const row = document.createElement('div');
-                row.className = 'bg-white/70 p-4 rounded-2xl border border-slate-100 space-y-2 shadow-sm';
-                row.innerHTML = `<div class="flex justify-between items-end"><span class="font-black text-slate-800 text-[11px] uppercase tracking-tighter">${d}</span><div class="text-right"><span class="font-black text-slate-900">${actual.toLocaleString()}</span>${target > 0 ? `<span class="text-slate-400 text-[10px] ml-1 font-bold">/ ${target.toLocaleString()}</span>` : ''}</div></div>${target > 0 ? `<div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden shadow-inner"><div class="h-full ${color} transition-all duration-1000 shadow-lg" style="width: ${Math.min(rate, 100)}%"></div></div><div class="text-[9px] font-black text-blue-600 text-right uppercase tracking-[0.2em]">${rate.toFixed(1)}% DISARING</div>` : '<div class="text-[9px] text-slate-300 font-bold italic tracking-widest uppercase">TIADA SASARAN</div>'}`;
-                container.appendChild(row);
-            });
+                return `<div class="bg-white/70 p-4 rounded-2xl border border-slate-100 space-y-2 shadow-sm"><div class="flex justify-between items-end"><span class="font-black text-slate-800 text-[11px] uppercase tracking-tighter">${esc(d)}</span><div class="text-right"><span class="font-black text-slate-900">${actual.toLocaleString()}</span>${target > 0 ? `<span class="text-slate-400 text-[10px] ml-1 font-bold">/ ${target.toLocaleString()}</span>` : ''}</div></div>${target > 0 ? `<div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden shadow-inner"><div class="h-full ${color} shadow-lg" style="width: ${Math.min(rate, 100)}%"></div></div><div class="text-[9px] font-black text-blue-600 text-right uppercase tracking-[0.2em]">${rate.toFixed(1)}% DISARING</div>` : '<div class="text-[9px] text-slate-300 font-bold italic tracking-widest uppercase">TIADA SASARAN</div>'}</div>`;
+            }).join('');
         }
 
         function renderAnalisa2() {
-            const container = document.getElementById('ptjCategoryPerformance');
-            container.innerHTML = '';
-            const p = document.getElementById('filterPlatform').value;
-            const ptj = document.getElementById('filterPTJ').value;
+            const container = $('ptjCategoryPerformance');
+            const p = $('filterPlatform').value, ptj = $('filterPTJ').value;
 
             if (p === 'KOSPEN WOW' && ptj === 'ALL') {
                 const cats = [
-                    { id: 'PKD', label: 'PKD (Klinik Kesihatan)', color: 'bg-emerald-500' },
-                    { id: 'Hospital', label: 'Hospital', color: 'bg-blue-500' },
-                    { id: 'PKPD', label: 'Pergigian', color: 'bg-rose-500' },
-                    { id: 'OTHERS', label: 'Lain-lain', color: 'bg-amber-500' }
+                    { id: 'PKD', label: 'PKD (Klinik Kesihatan)' }, { id: 'Hospital', label: 'Hospital' },
+                    { id: 'PKPD', label: 'Pergigian' }, { id: 'OTHERS', label: 'Lain-lain' }
                 ];
-                cats.forEach(cat => {
-                    const actual = filteredData.filter(r => r.PTJ_TYPE === cat.id).length;
-                    const row = document.createElement('div');
-                    row.className = 'bg-white/70 p-6 rounded-[2rem] border border-slate-100 flex justify-between items-center shadow-sm';
-                    row.innerHTML = `<h4 class="font-black text-slate-800 uppercase tracking-tighter text-sm">${cat.label}</h4><div class="text-right"><div class="font-black text-slate-900 text-2xl md:text-3xl">${actual.toLocaleString()}</div><div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Saringan</div></div>`;
-                    container.appendChild(row);
-                });
-            } else {
-                const counts = {}; 
-                filteredData.forEach(r => { 
-                    const key = (p === 'KOSPEN Community' ? r.LOCALITY : r.FACILITY_NAME) || 'TIADA NAMA'; 
-                    counts[key] = (counts[key] || 0) + 1; 
-                });
-
-                const list = Object.entries(counts).sort((a, b) => {
-                    const nameA = a[0].toUpperCase();
-                    const nameB = b[0].toUpperCase();
-                    const isPkdA = nameA.includes('PEJABAT KESIHATAN DAERAH');
-                    const isPkdB = nameB.includes('PEJABAT KESIHATAN DAERAH');
-
-                    if (isPkdA && !isPkdB) return -1;
-                    if (!isPkdA && isPkdB) return 1;
-
-                    return b[1] - a[1];
-                }).slice(0, 50);
-
-                list.forEach(([name, count]) => {
-                    let targetInfo = '';
-                    if (p === 'KOSPEN Community') {
-                        const normName = name.toUpperCase().trim();
-                        const locTarget = localityTargets[normName];
-                        if (locTarget !== undefined && locTarget > 0) {
-                            const pct = (count / locTarget * 100).toFixed(1);
-                            targetInfo = `<span class="text-[9px] text-slate-400 ml-1 font-bold">/ Sasaran: ${locTarget} (${pct}%)</span>`;
-                        }
-                    }
-                    const row = document.createElement('div');
-                    row.className = 'bg-white/70 p-4 rounded-xl flex justify-between items-center border border-slate-100 shadow-sm';
-                    row.innerHTML = `<span class="font-bold text-slate-700 truncate pr-4 text-[10px] md:text-[11px] uppercase tracking-tight">${name} ${targetInfo}</span><span class="font-black text-slate-900 text-sm">${count.toLocaleString()}</span>`;
-                    container.appendChild(row);
-                });
+                const c = {};
+                for (const r of filteredData) c[r.PTJ_TYPE] = (c[r.PTJ_TYPE] || 0) + 1;
+                container.innerHTML = cats.map(cat => `<div class="bg-white/70 p-6 rounded-[2rem] border border-slate-100 flex justify-between items-center shadow-sm"><h4 class="font-black text-slate-800 uppercase tracking-tighter text-sm">${cat.label}</h4><div class="text-right"><div class="font-black text-slate-900 text-2xl md:text-3xl">${(c[cat.id] || 0).toLocaleString()}</div><div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Saringan</div></div></div>`).join('');
+                return;
             }
-        }
 
-        function renderAnalisaCharts() {
-            document.getElementById('findingTotal').innerText = filteredData.length.toLocaleString();
-            
-            // SECTION A
-            updateChart('chartGender', 'GENDER', 'pie');
-            updateChart('chartEthnicity', 'ETHNICITY', 'bar', true);
-            const ageSort = (a, b) => {
-                const getNum = (s) => parseInt(s.match(/\d+/) || 0);
-                return getNum(a) - getNum(b);
-            };
-            updateChart('chartAge', 'AGE_GROUP', 'bar', false, [], ageSort);
+            const counts = {};
+            for (const r of filteredData) {
+                const key = (p === 'KOSPEN Community' ? r.LOCALITY : r.FACILITY_NAME) || 'TIADA NAMA';
+                counts[key] = (counts[key] || 0) + 1;
+            }
+            const list = Object.entries(counts).sort((a, b) => {
+                const pa = a[0].includes('PEJABAT KESIHATAN DAERAH'), pb = b[0].includes('PEJABAT KESIHATAN DAERAH');
+                if (pa && !pb) return -1; if (!pa && pb) return 1;
+                return b[1] - a[1];
+            }).slice(0, 50);
 
-            // SECTION B: STATUS KESIHATAN
-            renderComorbidityTypeChart();
-            updateChart('chartComorbidityCounts', '_COMORBIDITY_COUNT_CAT', 'pie', false, [], (a,b) => {
-                const order = { 'Sihat Sepenuhnya': 1, '1 Komorbiditi': 2, '2 Komorbiditi': 3, '>2 Komorbiditi': 4 };
-                return (order[a] || 9) - (order[b] || 9);
-            });
-
-            // SECTION C: FAKTOR RISIKO DAN PENYAKIT WITH CUSTOM SORTING
-            updateChart('chartDepression', 'MENTAL_HEALTH_DEPRESSION', 'pie');
-            updateChart('chartAnxiety', 'MENTAL_HEALTH_ANXIETY', 'pie');
-            updateChart('chartSmoking', 'SMOKING', 'pie', false, ['SMOKING', 'SMOKER']);
-            updateChart('chartAlcohol', 'ALCOHOL_AUDIT', 'pie');
-
-            // C5. Status BMI Sort Order: Underweight -> Normal Weight -> Overweight -> Obese-I -> Obese-II -> Obese-III
-            const bmiSort = (a, b) => {
-                const order = ['UNDERWEIGHT', 'NORMAL', 'OVERWEIGHT', 'OBESE-I', 'OBESE-II', 'OBESE-III', 'OBESE CLASS I', 'OBESE CLASS II', 'OBESE CLASS III'];
-                const getIndex = (s) => {
-                    const str = (s || '').toUpperCase();
-                    for (let i = 0; i < order.length; i++) {
-                        if (str.includes(order[i])) return i;
-                    }
-                    return 99;
-                };
-                return getIndex(a) - getIndex(b);
-            };
-            updateChart('chartBMI', 'BMI_CLASSIFICATION', 'bar', false, [], bmiSort);
-
-            // C6. Gula Dalam Darah Sort Order: Low Blood Glucose -> Normal Blood Glucose -> High Blood Glucose
-            const glucoseSort = (a, b) => {
-                const getIndex = (s) => {
-                    const str = (s || '').toUpperCase();
-                    if (str.includes('LOW')) return 1;
-                    if (str.includes('NORMAL')) return 2;
-                    if (str.includes('HIGH')) return 3;
-                    return 99;
-                };
-                return getIndex(a) - getIndex(b);
-            };
-            updateChart('chartGlucose', 'BLOOD_GLUCOSE_CLASSIFICATION', 'bar', false, [], glucoseSort);
-
-            // C7. Tekanan Darah Sort Order: Low Blood Pressure -> Normal Blood Pressure -> At Risk -> High Blood Pressure
-            const bpSort = (a, b) => {
-                const getIndex = (s) => {
-                    const str = (s || '').toUpperCase();
-                    if (str.includes('LOW')) return 1;
-                    if (str.includes('NORMAL')) return 2;
-                    if (str.includes('AT RISK') || str.includes('RISK')) return 3;
-                    if (str.includes('HIGH')) return 4;
-                    return 99;
-                };
-                return getIndex(a) - getIndex(b);
-            };
-            updateChart('chartBP', 'BLOOD_PRESSURE_CLASSIFICATION', 'bar', false, [], bpSort);
-
-            updateChart('chartCholesterol', 'BLOOD_CHOLESTEROL_CLASSIFICATION', 'bar');
-
-            // C9. Risiko NCD Sort Order: Healthy -> Healthy with Risk -> At Risk of NCD -> With NCD
-            const ncdSort = (a, b) => {
-                const getIndex = (s) => {
-                    const str = (s || '').toUpperCase();
-                    if (str === 'HEALTHY' || str === 'SIHAT') return 1;
-                    if (str.includes('WITH RISK')) return 2;
-                    if (str.includes('AT RISK OF NCD') || str.includes('AT RISK')) return 3;
-                    if (str.includes('WITH NCD')) return 4;
-                    return 99;
-                };
-                return getIndex(a) - getIndex(b);
-            };
-            updateChart('chartNCD', 'NCD_RISK_CLASSIFICATION', 'bar', false, [], ncdSort);
-        }
-
-        function renderComorbidityTypeChart() {
-            const id = 'chartComorbidityTypes';
-            const ctx = document.getElementById(id).getContext('2d');
-            
-            let counts = { 'Sihat Sepenuhnya': 0, 'Diabetes Mellitus': 0, 'Hypertension': 0, 'Hypercholesterolemia': 0, 'Others / Asthma': 0 };
-            
-            filteredData.forEach(r => {
-                if (r._IS_HEALTHY) counts['Sihat Sepenuhnya']++;
-                if (r._HAS_DM) counts['Diabetes Mellitus']++;
-                if (r._HAS_HT) counts['Hypertension']++;
-                if (r._HAS_HC) counts['Hypercholesterolemia']++;
-                if (r._HAS_OTHERS || r._HAS_ASTHMA) counts['Others / Asthma']++;
-            });
-
-            const labels = Object.keys(counts);
-            const data = Object.values(counts);
-            const totalRecords = filteredData.length;
-
-            if (charts[id]) charts[id].destroy();
-            const colors = ['#10b981', '#2563eb', '#db2777', '#f59e0b', '#6366f1'];
-
-            charts[id] = new Chart(ctx, {
-                type: 'pie',
-                data: { labels: labels, datasets: [{ data: data, backgroundColor: colors, borderWidth: 0 }] },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'bottom', labels: { font: { size: 9, weight: 'bold' }, padding: 15 } },
-                        tooltip: { 
-                            callbacks: { 
-                                label: (c) => ` ${c.raw.toLocaleString()} kes (${totalRecords > 0 ? ((c.raw / totalRecords) * 100).toFixed(1) : 0}% daripada jumlah populasi)` 
-                            } 
-                        },
-                        datalabels: {
-                            display: (context) => context.dataset.data[context.dataIndex] > 0,
-                            formatter: (v) => `${v}\n(${(v / totalRecords * 100).toFixed(1)}%)`,
-                            color: '#fff',
-                            font: { weight: '900', size: 9 },
-                            textAlign: 'center',
-                            textStrokeColor: 'rgba(0,0,0,0.4)',
-                            textStrokeWidth: 2
-                        }
-                    },
-                    layout: { padding: { top: 10, right: 10, left: 10, bottom: 20 } }
+            container.innerHTML = list.map(([name, count]) => {
+                let targetInfo = '';
+                if (p === 'KOSPEN Community') {
+                    const lt = localityTargets[name.toUpperCase().trim()];
+                    if (lt !== undefined && lt > 0) targetInfo = `<span class="text-[9px] text-slate-400 ml-1 font-bold">/ Sasaran: ${lt} (${pct(count, lt)}%)</span>`;
                 }
-            });
+                return `<div class="bg-white/70 p-4 rounded-xl flex justify-between items-center border border-slate-100 shadow-sm"><span class="font-bold text-slate-700 truncate pr-4 text-[10px] md:text-[11px] uppercase tracking-tight">${esc(name)} ${targetInfo}</span><span class="font-black text-slate-900 text-sm">${count.toLocaleString()}</span></div>`;
+            }).join('');
         }
 
-        function updateChart(id, col, type, horiz = false, fallbackCols = [], customSort = null) {
-            const ctx = document.getElementById(id).getContext('2d');
-            const counts = {}; 
-            filteredData.forEach(r => { 
-                let v = r[col];
-                if (!v && fallbackCols.length > 0) { for (let f of fallbackCols) { if (r[f]) { v = r[f]; break; } } }
-                v = v || 'TIADA REKOD'; 
-                counts[v] = (counts[v] || 0) + 1; 
+        // ================= CARTA =================
+        // Semua kiraan carta dibuat dalam SATU laluan data (sebelum ini 14 laluan)
+        function computeChartData() {
+            $('findingTotal').innerText = filteredData.length.toLocaleString();
+            const agg = {};
+            COUNT_DEFS.forEach(d => agg[d.id] = {});
+            const cm = { 'Sihat Sepenuhnya': 0, 'Diabetes Mellitus': 0, 'Hypertension': 0, 'Hypercholesterolemia': 0, 'Others / Asthma': 0 };
+
+            for (const r of filteredData) {
+                for (let i = 0; i < COUNT_DEFS.length; i++) {
+                    const def = COUNT_DEFS[i];
+                    const v = r[def.col] || 'TIADA REKOD';
+                    const o = agg[def.id];
+                    o[v] = (o[v] || 0) + 1;
+                }
+                if (r.H) cm['Sihat Sepenuhnya']++;
+                if (r.DM) cm['Diabetes Mellitus']++;
+                if (r.HT) cm['Hypertension']++;
+                if (r.HC) cm['Hypercholesterolemia']++;
+                if (r.OA) cm['Others / Asthma']++;
+            }
+
+            chartData = {};
+            COUNT_DEFS.forEach(def => {
+                const counts = agg[def.id];
+                const labels = Object.keys(counts);
+                if (def.sort) labels.sort(def.sort); else labels.sort((a, b) => counts[b] - counts[a]);
+                const data = labels.map(l => counts[l]);
+                chartData[def.id] = { labels, data, total: data.reduce((a, b) => a + b, 0) };
             });
+            chartData.chartComorbidityTypes = { labels: Object.keys(cm), data: Object.values(cm), total: filteredData.length };
+        }
 
-            let labels = Object.keys(counts); 
-            if (customSort) labels.sort(customSort);
-            else labels.sort((a,b) => counts[b] - counts[a]);
+        function buildConfig(def, d, big = false) {
+            const fs = big ? 12 : 9;
+            const ds = { data: d.data.slice(), _total: d.total, borderWidth: 0 };
+            const fmt = (v, c) => `${v}\n(${pct(v, c.dataset._total)}%)`;
 
-            const data = labels.map(l => counts[l]);
-            const total = data.reduce((a, b) => a + b, 0);
-            if (charts[id]) charts[id].destroy();
-            const colors = ['#2563eb', '#db2777', '#f59e0b', '#10b981', '#6366f1', '#f43f5e', '#8b5cf6', '#06b6d4', '#475569', '#14b8a6', '#f97316'];
-            
-            charts[id] = new Chart(ctx, {
-                type: type,
-                data: { labels: labels, datasets: [{ data: data, backgroundColor: colors, borderWidth: 0, borderRadius: 8 }] },
+            if (def.special === 'comorb') {
+                ds.backgroundColor = COLORS_COMORB;
+                return {
+                    type: 'pie',
+                    data: { labels: d.labels.slice(), datasets: [ds] },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom', labels: { font: { size: fs, weight: 'bold' }, padding: 15 } },
+                            tooltip: { callbacks: { label: c => ` ${c.raw.toLocaleString()} kes (${pct(c.raw, c.dataset._total)}% daripada jumlah populasi)` } },
+                            datalabels: {
+                                display: c => c.dataset.data[c.dataIndex] > 0,
+                                formatter: fmt, color: '#fff', font: { weight: '900', size: fs }, textAlign: 'center',
+                                textStrokeColor: 'rgba(0,0,0,0.4)', textStrokeWidth: 2
+                            }
+                        },
+                        layout: { padding: { top: 10, right: 10, left: 10, bottom: 20 } }
+                    }
+                };
+            }
+
+            const isPie = def.type === 'pie';
+            ds.backgroundColor = COLORS;
+            ds.borderRadius = 8;
+            return {
+                type: def.type,
+                data: { labels: d.labels.slice(), datasets: [ds] },
                 options: {
-                    responsive: true, maintainAspectRatio: false, indexAxis: horiz ? 'y' : 'x',
+                    responsive: true, maintainAspectRatio: false, indexAxis: def.horiz ? 'y' : 'x',
                     plugins: {
-                        legend: { display: type === 'pie', position: 'bottom', labels: { font: { size: 9, weight: 'bold' }, padding: 15 } },
-                        tooltip: { callbacks: { label: (c) => ` ${c.raw.toLocaleString()} (${total > 0 ? ((c.raw / total) * 100).toFixed(1) : 0}%)` } },
+                        legend: { display: isPie, position: 'bottom', labels: { font: { size: fs, weight: 'bold' }, padding: 15 } },
+                        tooltip: { callbacks: { label: c => ` ${c.raw.toLocaleString()} (${pct(c.raw, c.dataset._total)}%)` } },
                         datalabels: {
-                            display: (context) => (context.dataset.data[context.dataIndex] / total * 100) > 3,
-                            formatter: (v) => `${v}\n(${(v / total * 100).toFixed(1)}%)`,
-                            color: type === 'pie' ? '#fff' : '#1e293b',
-                            font: { weight: '900', size: 9 },
-                            textAlign: 'center',
-                            anchor: type === 'pie' ? 'center' : 'end',
-                            align: type === 'pie' ? 'center' : (horiz ? 'right' : 'top'),
-                            offset: type === 'pie' ? 0 : 5,
-                            textStrokeColor: type === 'pie' ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.8)',
-                            textStrokeWidth: 2,
-                            clamp: true
+                            display: c => c.dataset._total > 0 && (c.dataset.data[c.dataIndex] / c.dataset._total * 100) > 3,
+                            formatter: fmt,
+                            color: isPie ? '#fff' : '#1e293b',
+                            font: { weight: '900', size: fs }, textAlign: 'center',
+                            anchor: isPie ? 'center' : 'end',
+                            align: isPie ? 'center' : (def.horiz ? 'right' : 'top'),
+                            offset: isPie ? 0 : 5,
+                            textStrokeColor: isPie ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.8)',
+                            textStrokeWidth: 2, clamp: true
                         }
                     },
                     layout: { padding: { top: 30, right: 40, left: 10, bottom: 40 } },
-                    scales: type === 'bar' ? { 
-                        y: { beginAtZero: true, grid: { display: false }, ticks: { font: { size: 9, weight: 'bold' } } }, 
-                        x: { 
-                            grid: { display: false }, 
-                            ticks: { 
-                                font: { size: 8, weight: '900' },
-                                autoSkip: false,
-                                maxRotation: 45,
-                                minRotation: 45
-                            } 
-                        } 
+                    scales: def.type === 'bar' ? {
+                        y: { beginAtZero: true, grid: { display: false }, ticks: { font: { size: fs, weight: 'bold' } } },
+                        x: { grid: { display: false }, ticks: { font: { size: big ? 11 : 8, weight: '900' }, autoSkip: false, maxRotation: 45, minRotation: 45 } }
                     } : {}
                 }
-            });
+            };
         }
 
-        // FUNGSI PEMBESARAN CARTA (MODAL OVERLAY)
+        // Carta hanya dilukis bila hampir kelihatan di skrin; carta sedia ada dikemas kini (bukan dibina semula)
+        const visible = new Set();
+        const dirty = new Set();
+
+        function drawChart(id) {
+            const d = chartData[id];
+            if (!d) return;
+            const ch = charts[id];
+            if (ch) {
+                ch.data.labels = d.labels.slice();
+                ch.data.datasets[0].data = d.data.slice();
+                ch.data.datasets[0]._total = d.total;
+                ch.update('none');
+            } else {
+                charts[id] = new Chart($(id), buildConfig(DEF_BY_ID[id], d));
+            }
+            dirty.delete(id);
+        }
+
+        function refreshCharts() {
+            CHART_DEFS.forEach(def => { if (visible.has(def.id)) drawChart(def.id); else dirty.add(def.id); });
+        }
+
+        function setupLazyCharts() {
+            const io = new IntersectionObserver(entries => {
+                entries.forEach(e => {
+                    const id = e.target.id;
+                    if (e.isIntersecting) { visible.add(id); if (dirty.has(id) || !charts[id]) drawChart(id); }
+                    else visible.delete(id);
+                });
+            }, { rootMargin: '400px 0px' });
+            CHART_DEFS.forEach(def => io.observe($(def.id)));
+        }
+
+        // ================= MODAL =================
         function openChartModal(chartId, title) {
-            const origChart = charts[chartId];
-            if (!origChart) return;
-
-            document.getElementById('modalChartTitle').innerText = title;
-            const modalEl = document.getElementById('chartModal');
-            modalEl.classList.remove('hidden');
-
-            const ctx = document.getElementById('modalCanvas').getContext('2d');
+            const def = DEF_BY_ID[chartId];
+            if (!def || !chartData[chartId]) return;
+            $('modalChartTitle').innerText = title;
+            $('chartModal').classList.remove('hidden');
             if (modalChartInstance) modalChartInstance.destroy();
-
-            const origData = JSON.parse(JSON.stringify(origChart.config.data));
-            const origType = origChart.config.type;
-            const origOptions = JSON.parse(JSON.stringify(origChart.config.options));
-
-            if (origOptions.plugins && origOptions.plugins.datalabels) {
-                origOptions.plugins.datalabels.font.size = 12;
-            }
-            if (origOptions.plugins && origOptions.plugins.legend) {
-                origOptions.plugins.legend.labels.font.size = 12;
-            }
-
-            modalChartInstance = new Chart(ctx, {
-                type: origType,
-                data: origData,
-                options: {
-                    ...origOptions,
-                    maintainAspectRatio: false,
-                    responsive: true
-                }
-            });
-
-            lucide.createIcons();
+            modalChartInstance = new Chart($('modalCanvas'), buildConfig(def, chartData[chartId], true));
         }
 
         function closeChartModal(e, force = false) {
-            if (!force && e && e.target !== document.getElementById('chartModal')) return;
-            document.getElementById('chartModal').classList.add('hidden');
-            if (modalChartInstance) {
-                modalChartInstance.destroy();
-                modalChartInstance = null;
-            }
+            if (!force && e && e.target !== $('chartModal')) return;
+            $('chartModal').classList.add('hidden');
+            if (modalChartInstance) { modalChartInstance.destroy(); modalChartInstance = null; }
         }
 
-        function showLoader() { document.getElementById('loadingOverlay').classList.remove('opacity-0', 'pointer-events-none'); }
-        function hideLoader() { document.getElementById('loadingOverlay').classList.add('opacity-0', 'pointer-events-none'); }
+        function showLoader() { $('loadingOverlay').classList.remove('opacity-0', 'pointer-events-none'); }
+        function hideLoader() { $('loadingOverlay').classList.add('opacity-0', 'pointer-events-none'); }
     </script>
 </body>
 </html>
